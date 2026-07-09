@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+
+.pytest_cache/
+
+.env
+
+logs/
+
+.venv/
+venv/
+env/
+
+*.log
+
+chroma_db/
+.DS_Store
