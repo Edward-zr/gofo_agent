@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is pickup completion KPI?",
+    "expected_source": "GL揽收分工SOP.pdf"
+  },
+  {
+    "question": "What photos are required during pickup?",
+    "expected_source": "GL揽收分工SOP.pdf"
+  },
+  {
+    "question": "What is CBT?",
+    "expected_source": "CBT 商家大会.pdf"
+  }
+]

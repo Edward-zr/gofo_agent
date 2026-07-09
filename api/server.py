@@ -1,0 +1,140 @@
+"""FastAPI server exposing the GOFO Operations Intelligence Agent."""
+
+from __future__ import annotations
+
+import sqlite3
+from time import perf_counter
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+import config
+from api.schemas import AskRequest, AskResponse, HealthResponse
+from core.error_handler import error_payload, handle_error
+from core.errors import AgentError, DatabaseError
+from core.agent import GOFOAgent
+from core.logger import get_logger
+from core.session import SessionManager
+from tools.memory.database import get_connection
+
+logger = get_logger("api")
+
+app = FastAPI(
+    title="GOFO Operations Intelligence Agent",
+    description="HTTP API for the GOFO Operations Intelligence Dashboard.",
+    version="1.0.0",
+)
+
+session_manager = SessionManager()
+agent = session_manager.get_session("default")
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log method, path, status code, and execution time for each request."""
+    started = perf_counter()
+    response = await call_next(request)
+    elapsed_ms = int((perf_counter() - started) * 1000)
+    logger.info(
+        "%s %s %s %sms",
+        request.method,
+        request.url.path,
+        response.status_code,
+        elapsed_ms,
+    )
+    return response
+
+
+@app.exception_handler(AgentError)
+async def agent_error_handler(_request: Request, exc: AgentError) -> JSONResponse:
+    """Return safe JSON for known agent errors."""
+    logger.exception("AgentError: %s", handle_error(exc))
+    status_code = 503 if isinstance(exc, DatabaseError) else 500
+    return JSONResponse(status_code=status_code, content=error_payload(exc))
+
+
+@app.exception_handler(sqlite3.Error)
+async def sqlite_error_handler(_request: Request, exc: sqlite3.Error) -> JSONResponse:
+    """Return safe JSON for SQLite errors."""
+    logger.exception("SQLite error: %s", handle_error(exc))
+    return JSONResponse(status_code=500, content=error_payload(exc))
+
+
+@app.exception_handler(Exception)
+async def generic_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Return safe JSON for unexpected errors."""
+    logger.exception("Unhandled error: %s", handle_error(exc))
+    return JSONResponse(status_code=500, content=error_payload(exc))
+
+
+@app.get("/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    """Return service dependency health."""
+    return HealthResponse(
+        status="running",
+        version="1.0",
+        database="connected" if _database_connected() else "missing",
+        memory="enabled" if _memory_enabled() else "disabled",
+        rag="enabled" if config.CHROMA_PERSIST_DIR.exists() else "disabled",
+    )
+
+
+@app.get("/", response_model=HealthResponse)
+def root() -> HealthResponse:
+    """Compatibility health endpoint."""
+    return health()
+
+
+@app.post("/ask", response_model=AskResponse)
+def ask_question(body: AskRequest) -> AskResponse:
+    """Ask the agent a question and return dashboard-friendly structured output."""
+    try:
+        session_agent = session_manager.get_session(body.session_id)
+        response = session_agent.ask(body.question)
+        _log_memory_debug(body.session_id, response)
+        return AskResponse.model_validate(response)
+    except Exception as exc:
+        if isinstance(exc, ValueError):
+            return JSONResponse(status_code=422, content=error_payload(exc))
+        raise
+
+
+def _database_connected() -> bool:
+    if not config.SQLITE_DATABASE.exists():
+        return False
+    try:
+        connection = sqlite3.connect(str(config.SQLITE_DATABASE))
+        connection.execute("SELECT 1;")
+        connection.close()
+        return True
+    except sqlite3.Error:
+        return False
+
+
+def _memory_enabled() -> bool:
+    try:
+        with get_connection() as connection:
+            connection.execute("SELECT 1 FROM conversation_history LIMIT 1;")
+        return True
+    except sqlite3.Error:
+        return False
+
+
+def _log_memory_debug(session_id: str, response: dict) -> None:
+    """Log session memory state for debugging API conversation continuity."""
+    analysis = response.get("analysis") or {}
+    logger.info("SESSION ID: %s", session_id)
+    logger.info("Memory turns: %s", analysis.get("memory_turns"))
+    logger.info("Previous question: %s", analysis.get("previous_question"))
+    logger.info("Previous answer: %s", analysis.get("previous_answer"))
+    logger.info("Current entities: %s", analysis.get("current_entities"))
+    logger.info("Repair detected: %s", analysis.get("repair_detected"))
+    logger.info("Previous state: %s", analysis.get("previous_state"))
+    logger.info("New state: %s", analysis.get("new_state"))
+    logger.info("Resolved question: %s", analysis.get("resolved_question"))
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("api.server:app", host=config.API_HOST, port=config.API_PORT, reload=True)

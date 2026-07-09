@@ -1,0 +1,39 @@
+pickup_completion_rate:
+  formula: completed pickups / total pickups
+  dimensions:
+    - hub
+    - driver
+    - customer
+  good: ">=95%"
+  warning: "90-95%"
+  bad: "<90%"
+
+delay_rate:
+  formula: delayed pickups / total pickups
+  dimensions:
+    - hub
+    - driver
+    - customer
+  good: "<=5%"
+  warning: "5-10%"
+  bad: ">10%"
+
+failure_rate:
+  formula: failed pickups / total pickups
+  dimensions:
+    - hub
+    - driver
+    - customer
+  good: "<=2%"
+  warning: "2-5%"
+  bad: ">5%"
+
+package_volume:
+  formula: SUM(package_count)
+  dimensions:
+    - hub
+    - driver
+    - customer
+  good: stable or increasing with high completion
+  warning: volume spike with delay increase
+  bad: volume spike with completion drop
