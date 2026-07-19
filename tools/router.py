@@ -20,6 +20,8 @@ from tools.memory.findings import remember_finding
 from tools.memory.learning import detect_repeated_patterns
 from tools.memory.long_memory import LongTermMemory
 from tools.memory.result_analyzer import analyze_previous_result
+from tools.orchestration.models import SemanticAnalysis
+from tools.orchestration.next_steps import generate_next_steps
 from tools.planner import PlanningDecision, plan
 from tools.rag.service import answer as rag_answer
 from tools.sql.service import answer as sql_answer
@@ -27,6 +29,11 @@ from tools.synthesizer import synthesize
 
 
 UNKNOWN_ANSWER = "I don't know how to route this request."
+CONVERSATION_FALLBACK = (
+    "I can help analyze GOFO operations, investigate performance issues, "
+    "answer SOP questions, and review uploaded reports. "
+    "Try asking about today's pickups, hub rankings, root causes, or the pickup SOP."
+)
 
 
 def route(request: QueryRequest) -> QueryResponse:
@@ -71,10 +78,28 @@ def route(request: QueryRequest) -> QueryResponse:
             long_memory,
         )
 
-    decision = plan(question)
+    semantic = _load_semantic_analysis(request.semantic_context)
+    if semantic and semantic.should_answer_directly():
+        return _finalize_response(
+            _conversation_response(question, semantic),
+            question,
+            business_context,
+            historical_context,
+            long_memory,
+        )
+
+    decision = _resolve_planning_decision(question, semantic)
 
     if decision.capability == "unknown":
-        return _unknown_response(question, decision)
+        if semantic and semantic.direct_reply:
+            return _finalize_response(
+                _conversation_response(question, semantic),
+                question,
+                business_context,
+                historical_context,
+                long_memory,
+            )
+        return _unknown_response(question, decision, semantic)
 
     sql_result: QueryResponse | None = None
     rag_result: QueryResponse | None = None
@@ -97,7 +122,7 @@ def route(request: QueryRequest) -> QueryResponse:
         capability = "rag"
         final_answer = rag_result.answer if rag_result else None
     else:
-        return _unknown_response(question, decision)
+        return _unknown_response(question, decision, semantic)
 
     sources = rag_result.sources if rag_result else []
     rewritten_question = None
@@ -130,16 +155,23 @@ def route(request: QueryRequest) -> QueryResponse:
     response = _with_business_context(response, business_context)
     if sql_result and sql_result.sql_rows:
         _attach_operational_analysis(response, question, sql_result.sql_rows)
+    response = _attach_semantic_metadata(response, semantic)
+    response = _attach_next_steps(response, question=question, semantic=semantic)
     return _finalize_response(response, question, business_context, historical_context, long_memory)
 
 
-def _unknown_response(question: str, decision: PlanningDecision) -> QueryResponse:
-    """Return a structured response when no GOFO capability is appropriate."""
+def _unknown_response(
+    question: str,
+    decision: PlanningDecision,
+    semantic: SemanticAnalysis | None = None,
+) -> QueryResponse:
+    """Return a helpful response when no GOFO capability is appropriate."""
+    answer = semantic.direct_reply if semantic and semantic.direct_reply else CONVERSATION_FALLBACK
     return QueryResponse(
         question=question,
-        answer=UNKNOWN_ANSWER,
+        answer=answer,
         sources=[],
-        capability="unknown",
+        capability="conversation" if semantic and semantic.direct_reply else "unknown",
         needs_sql=decision.requires_sql,
         needs_rag=decision.requires_rag,
         plan_reason=decision.reasoning,
@@ -149,7 +181,95 @@ def _unknown_response(question: str, decision: PlanningDecision) -> QueryRespons
         planning_confidence=decision.confidence,
         planning_reasoning=decision.reasoning,
         planning_entities=decision.entities,
+        semantic_domain=semantic.domain if semantic else None,
+        semantic_sub_intent=semantic.sub_intent if semantic else None,
+        response_mode=semantic.response_mode if semantic else None,
+        semantic_reasoning=semantic.reasoning if semantic else decision.reasoning,
+        suggested_next_steps=_default_next_steps(),
     )
+
+
+def _conversation_response(question: str, semantic: SemanticAnalysis) -> QueryResponse:
+    """Return a conversational analyst response without SQL/RAG execution."""
+    return QueryResponse(
+        question=question,
+        answer=semantic.direct_reply or CONVERSATION_FALLBACK,
+        sources=[],
+        capability="conversation",
+        execution_order=["conversation"],
+        planning_capability="conversation",
+        planning_intent=semantic.planner_intent,
+        planning_confidence=semantic.confidence,
+        planning_reasoning=semantic.reasoning,
+        planning_entities=semantic.entities,
+        semantic_domain=semantic.domain,
+        semantic_sub_intent=semantic.sub_intent,
+        response_mode=semantic.response_mode,
+        semantic_reasoning=semantic.reasoning,
+        business_metric=semantic.metric,
+        analysis_dimension=semantic.dimension,
+        suggested_next_steps=_default_next_steps(),
+    )
+
+
+def _resolve_planning_decision(
+    question: str,
+    semantic: SemanticAnalysis | None,
+) -> PlanningDecision:
+    """Choose a planning decision using semantic analysis with LLM fallback."""
+    if semantic and semantic.is_actionable() and semantic.confidence >= 0.55:
+        return semantic.to_planning_decision()
+    llm_decision = plan(question)
+    if llm_decision.capability != "unknown":
+        return llm_decision
+    if semantic and semantic.is_actionable():
+        return semantic.to_planning_decision()
+    return llm_decision
+
+
+def _load_semantic_analysis(payload: dict | None) -> SemanticAnalysis | None:
+    if not payload:
+        return None
+    return SemanticAnalysis.model_validate(payload)
+
+
+def _attach_semantic_metadata(
+    response: QueryResponse,
+    semantic: SemanticAnalysis | None,
+) -> QueryResponse:
+    if not semantic:
+        return response
+    response.semantic_domain = semantic.domain
+    response.semantic_sub_intent = semantic.sub_intent
+    response.response_mode = semantic.response_mode
+    response.semantic_reasoning = semantic.reasoning
+    response.business_metric = response.business_metric or semantic.metric
+    response.analysis_dimension = response.analysis_dimension or semantic.dimension
+    return response
+
+
+def _attach_next_steps(
+    response: QueryResponse,
+    *,
+    question: str,
+    semantic: SemanticAnalysis | None,
+) -> QueryResponse:
+    if response.suggested_next_steps:
+        return response
+    response.suggested_next_steps = generate_next_steps(
+        question=question,
+        response=response,
+        semantic=semantic,
+    )
+    return response
+
+
+def _default_next_steps() -> list[str]:
+    return [
+        "How are operations performing today?",
+        "Rank all hubs by performance.",
+        "What is the pickup SOP?",
+    ]
 
 
 def _memory_analysis_response(

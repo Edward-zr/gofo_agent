@@ -165,3 +165,5 @@ def test_schema_rules_are_in_system_prompt(mock_get_llm: MagicMock) -> None:
     assert "Always use pickup_date for operational dates." in system_prompt
     assert "For hub or warehouse questions, JOIN drivers and use drivers.hub." in system_prompt
     assert "For details questions, return actual rows, not only COUNT." in system_prompt
+    assert "Conversation context is NOT a SQL filter." in system_prompt
+    assert "Global driver ranking must GROUP BY driver" in system_prompt

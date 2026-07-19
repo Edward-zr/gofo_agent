@@ -22,11 +22,13 @@ def test_retrieve_empty_question_raises() -> None:
         retrieve(request)
 
 
+@patch("tools.rag.retriever._should_use_hybrid", return_value=False)
 @patch("tools.rag.retriever.get_collection")
 @patch("tools.rag.retriever._get_embeddings")
 def test_retrieve_empty_results(
     mock_get_embeddings: MagicMock,
     mock_get_collection: MagicMock,
+    _mock_hybrid: MagicMock,
 ) -> None:
     mock_get_embeddings.return_value.embed_query.return_value = [0.1, 0.2, 0.3]
     mock_collection = MagicMock()
@@ -45,11 +47,13 @@ def test_retrieve_empty_results(
     mock_collection.query.assert_called_once()
 
 
+@patch("tools.rag.retriever._should_use_hybrid", return_value=False)
 @patch("tools.rag.retriever.get_collection")
 @patch("tools.rag.retriever._get_embeddings")
 def test_retrieve_valid_results(
     mock_get_embeddings: MagicMock,
     mock_get_collection: MagicMock,
+    _mock_hybrid: MagicMock,
 ) -> None:
     mock_get_embeddings.return_value.embed_query.return_value = [0.1, 0.2, 0.3]
     mock_collection = MagicMock()

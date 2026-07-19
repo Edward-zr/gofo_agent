@@ -17,7 +17,7 @@ class FakeStatefulAgent:
         self.previous_answer: str | None = None
         self.turns = 0
 
-    def ask(self, question: str) -> dict:
+    def ask(self, question: str, attachment_ids: list[str] | None = None) -> dict:
         self.turns += 1
         normalized = question.lower()
         repair_detected = False

@@ -5,16 +5,17 @@ from __future__ import annotations
 import sqlite3
 from time import perf_counter
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import JSONResponse
 
 import config
-from api.schemas import AskRequest, AskResponse, HealthResponse
+from api.schemas import AskRequest, AskResponse, AttachmentInfo, AttachmentUploadResponse, HealthResponse
 from core.error_handler import error_payload, handle_error
-from core.errors import AgentError, DatabaseError
+from core.errors import AgentError, DatabaseError, FileError
 from core.agent import GOFOAgent
 from core.logger import get_logger
 from core.session import SessionManager
+from tools.files.service import AttachmentService
 from tools.memory.database import get_connection
 
 logger = get_logger("api")
@@ -25,7 +26,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
-session_manager = SessionManager()
+attachment_service = AttachmentService()
+
+
+def _create_session_agent() -> GOFOAgent:
+    """Create a session agent that shares the API attachment store."""
+    session_agent = GOFOAgent()
+    session_agent.attachment_service = attachment_service
+    return session_agent
+
+
+session_manager = SessionManager(agent_factory=_create_session_agent)
 agent = session_manager.get_session("default")
 
 
@@ -43,6 +54,13 @@ async def log_requests(request: Request, call_next):
         elapsed_ms,
     )
     return response
+
+
+@app.exception_handler(FileError)
+async def file_error_handler(_request: Request, exc: FileError) -> JSONResponse:
+    """Return safe JSON for file upload and processing errors."""
+    logger.exception("FileError: %s", handle_error(exc))
+    return JSONResponse(status_code=400, content=error_payload(exc))
 
 
 @app.exception_handler(AgentError)
@@ -85,12 +103,31 @@ def root() -> HealthResponse:
     return health()
 
 
+@app.post("/attachments", response_model=AttachmentUploadResponse)
+async def upload_attachments(
+    files: list[UploadFile] = File(...),
+    session_id: str = Form("default"),
+) -> AttachmentUploadResponse:
+    """Upload one or more files and return attachment metadata."""
+    uploaded: list[AttachmentInfo] = []
+    for upload in files:
+        content = await upload.read()
+        metadata = attachment_service.upload(
+            filename=upload.filename or "upload.bin",
+            content=content,
+            content_type=upload.content_type,
+            conversation_id=session_id,
+        )
+        uploaded.append(AttachmentInfo.model_validate(metadata.model_dump()))
+    return AttachmentUploadResponse(attachments=uploaded)
+
+
 @app.post("/ask", response_model=AskResponse)
 def ask_question(body: AskRequest) -> AskResponse:
     """Ask the agent a question and return dashboard-friendly structured output."""
     try:
         session_agent = session_manager.get_session(body.session_id)
-        response = session_agent.ask(body.question)
+        response = session_agent.ask(body.question, attachment_ids=body.attachments)
         _log_memory_debug(body.session_id, response)
         return AskResponse.model_validate(response)
     except Exception as exc:
@@ -132,6 +169,8 @@ def _log_memory_debug(session_id: str, response: dict) -> None:
     logger.info("Previous state: %s", analysis.get("previous_state"))
     logger.info("New state: %s", analysis.get("new_state"))
     logger.info("Resolved question: %s", analysis.get("resolved_question"))
+    logger.info("Attachment IDs: %s", analysis.get("attachment_ids"))
+    logger.info("Data sources: %s", analysis.get("data_sources"))
 
 
 if __name__ == "__main__":

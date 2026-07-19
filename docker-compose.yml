@@ -3,12 +3,25 @@ services:
     build: .
     env_file:
       - .env
+    environment:
+      PYTHONPATH: /app
+      MPLCONFIGDIR: /tmp/matplotlib
     ports:
       - "8000:8000"
     volumes:
+      # Mount source so Excel reader / analyzer fixes apply without stale image code.
+      - ./api:/app/api
+      - ./core:/app/core
+      - ./tools:/app/tools
+      - ./frontend:/app/frontend
+      - ./config.py:/app/config.py
+      - ./agent.py:/app/agent.py
+      - ./ingest.py:/app/ingest.py
+      - ./assets:/app/assets
       - ./data:/app/data
       - ./logs:/app/logs
       - ./chroma_db:/app/chroma_db
+      - ./data/uploads:/app/data/uploads
 
   gofo-ui:
     build: .
@@ -16,12 +29,22 @@ services:
       - .env
     environment:
       API_BASE_URL: http://gofo-api:8000
+      PYTHONPATH: /app
+      MPLCONFIGDIR: /tmp/matplotlib
     command: streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
     ports:
       - "8501:8501"
     volumes:
+      - ./api:/app/api
+      - ./core:/app/core
+      - ./tools:/app/tools
+      - ./frontend:/app/frontend
+      - ./config.py:/app/config.py
+      - ./agent.py:/app/agent.py
+      - ./assets:/app/assets
       - ./data:/app/data
       - ./logs:/app/logs
       - ./chroma_db:/app/chroma_db
+      - ./data/uploads:/app/data/uploads
     depends_on:
       - gofo-api

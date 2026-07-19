@@ -9,7 +9,7 @@ from core.models import QueryResponse
 
 
 @patch("tools.memory.conversation.extract_entities")
-@patch("core.agent.ask_core")
+@patch("core.route_dispatcher.ask_core")
 def test_highest_driver_then_actually_lowest_changes_sql_order(
     mock_ask_core: MagicMock,
     mock_extract_entities: MagicMock,
@@ -27,7 +27,7 @@ def test_highest_driver_then_actually_lowest_changes_sql_order(
 
 
 @patch("tools.memory.conversation.extract_entities")
-@patch("core.agent.ask_core")
+@patch("core.route_dispatcher.ask_core")
 def test_rank_hubs_then_why_worst_uses_previous_hub_result(
     mock_ask_core: MagicMock,
     mock_extract_entities: MagicMock,
@@ -45,7 +45,7 @@ def test_rank_hubs_then_why_worst_uses_previous_hub_result(
 
 @patch("tools.memory.resolver.get_llm")
 @patch("tools.memory.conversation.extract_entities")
-@patch("core.agent.ask_core")
+@patch("core.route_dispatcher.ask_core")
 def test_highest_driver_then_which_hub_uses_entity_memory(
     mock_ask_core: MagicMock,
     mock_extract_entities: MagicMock,
@@ -66,7 +66,7 @@ def test_highest_driver_then_which_hub_uses_entity_memory(
 
 
 @patch("tools.memory.conversation.extract_entities")
-@patch("core.agent.ask_core")
+@patch("core.route_dispatcher.ask_core")
 def test_highest_driver_then_actually_lowest_does_not_mention_previous_driver(
     mock_ask_core: MagicMock,
     mock_extract_entities: MagicMock,
@@ -83,7 +83,11 @@ def test_highest_driver_then_actually_lowest_does_not_mention_previous_driver(
     assert "Drew Nguyen" not in response["answer"]
 
 
-def _fake_agent_response(question: str, result_context: dict | None = None) -> QueryResponse:
+def _fake_agent_response(
+    question: str,
+    result_context: dict | None = None,
+    **kwargs,
+) -> QueryResponse:
     normalized = question.lower()
     if "which hub does drew nguyen" in normalized:
         return QueryResponse(

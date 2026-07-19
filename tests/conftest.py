@@ -8,7 +8,9 @@ import pytest
 
 from core.models import SourceChunk
 from tools.llm.client import get_llm
+from tools.orchestration.models import SemanticAnalysis
 from tools.rag import retriever
+from tools.rag.bm25_index import clear_bm25_cache
 
 
 @pytest.fixture(autouse=True)
@@ -16,11 +18,46 @@ def clear_module_caches() -> None:
     """Clear cached OpenAI/Chroma clients between tests."""
     retriever._get_embeddings.cache_clear()
     retriever._get_chroma_client.cache_clear()
+    clear_bm25_cache()
     get_llm.cache_clear()
     yield
     retriever._get_embeddings.cache_clear()
     retriever._get_chroma_client.cache_clear()
+    clear_bm25_cache()
     get_llm.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def mock_semantic_orchestration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Provide deterministic semantic analysis during agent and router tests."""
+
+    def _default_analyze(
+        question: str,
+        *,
+        resolved_question: str | None = None,
+        conversation_state: dict | None = None,
+        repair_detected: bool = False,
+        has_attachments: bool = False,
+    ) -> SemanticAnalysis:
+        del conversation_state, repair_detected, has_attachments
+        return SemanticAnalysis(
+            domain="data_analytics",
+            sub_intent="analysis",
+            capability="sql",
+            response_mode="analytical",
+            confidence=0.5,
+            resolved_question=resolved_question or question,
+            reasoning="Test default semantic analysis.",
+            requires_sql=True,
+            requires_rag=False,
+            planner_intent="operational_analysis",
+        )
+
+    monkeypatch.setattr("core.agent.analyze_request", _default_analyze)
+    monkeypatch.setattr(
+        "tools.router.generate_next_steps",
+        lambda **kwargs: [],
+    )
 
 
 @pytest.fixture

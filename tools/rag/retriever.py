@@ -1,4 +1,4 @@
-"""ChromaDB retrieval for GOFO SOP knowledge (no LLM generation)."""
+"""Hybrid ChromaDB + BM25 retrieval for GOFO SOP knowledge."""
 
 from __future__ import annotations
 
@@ -11,6 +11,9 @@ from langchain_openai import OpenAIEmbeddings
 
 import config
 from core.models import QueryRequest, SourceChunk
+from tools.rag.bm25_index import clear_bm25_cache, get_bm25_retriever
+from tools.rag.corpus import bm25_corpus_path
+from tools.rag.hybrid import HybridRetriever
 
 
 @lru_cache(maxsize=1)
@@ -48,19 +51,10 @@ def _distance_to_score(distance: float) -> float:
     return 1.0 / (1.0 + distance)
 
 
-def retrieve(request: QueryRequest) -> list[SourceChunk]:
-    """
-    Retrieve the top-k most similar chunks for a question.
-
-    Embeds the query with OpenAI embeddings and searches ChromaDB.
-    Does not call a chat/completion model.
-    """
-    question = request.question.strip()
-    if not question:
-        raise ValueError("Question must not be empty.")
-
+def _dense_retrieve(request: QueryRequest) -> list[SourceChunk]:
+    """Run dense vector retrieval against ChromaDB."""
     collection = get_collection(request.collection)
-    query_embedding = _get_embeddings().embed_query(question)
+    query_embedding = _get_embeddings().embed_query(request.question)
 
     results = collection.query(
         query_embeddings=[query_embedding],
@@ -83,6 +77,7 @@ def retrieve(request: QueryRequest) -> list[SourceChunk]:
         documents[0],
         metadatas[0],
         distances[0],
+        strict=True,
     ):
         chunks.append(
             SourceChunk(
@@ -92,5 +87,36 @@ def retrieve(request: QueryRequest) -> list[SourceChunk]:
                 metadata=metadata or {},
             )
         )
-
     return chunks
+
+
+def retrieve(request: QueryRequest) -> list[SourceChunk]:
+    """
+    Retrieve the top-k most relevant chunks for a question.
+
+    Uses hybrid dense + BM25 retrieval with RRF fusion and cross-encoder
+    reranking when enabled and a BM25 corpus is available. Falls back to
+    dense-only retrieval for backward compatibility.
+    """
+    question = request.question.strip()
+    if not question:
+        raise ValueError("Question must not be empty.")
+
+    if _should_use_hybrid():
+        return HybridRetriever().retrieve(request, dense_search=_dense_retrieve)
+    return _dense_retrieve(request)
+
+
+def _should_use_hybrid() -> bool:
+    if not config.HYBRID_RETRIEVAL_ENABLED:
+        return False
+    if not bm25_corpus_path().exists():
+        return False
+    return get_bm25_retriever().available()
+
+
+def clear_retriever_caches() -> None:
+    """Clear cached clients used by retrieval."""
+    _get_embeddings.cache_clear()
+    _get_chroma_client.cache_clear()
+    clear_bm25_cache()

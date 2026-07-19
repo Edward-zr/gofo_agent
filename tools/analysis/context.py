@@ -28,13 +28,24 @@ def analyze_business_context(question: str) -> dict[str, Any]:
 
 def is_operations_overview(question: str) -> bool:
     normalized = question.lower().strip()
-    return normalized in {
-        "how are operations?",
+    overview_phrases = (
         "how are operations",
-        "how is operations",
         "operations summary",
         "operational summary",
-    } or "how are operations" in normalized
+        "what happened today",
+        "today's report",
+        "todays report",
+        "executive report",
+        "executive summary",
+        "executive operational summary",
+        "weekly report",
+        "monthly report",
+        "summarize today",
+        "generate today's",
+        "generate today",
+        "today's operational",
+    )
+    return any(phrase in normalized for phrase in overview_phrases)
 
 
 def is_why_question(question: str) -> bool:

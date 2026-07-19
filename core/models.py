@@ -24,6 +24,22 @@ class QueryRequest(BaseModel):
         default=None,
         description="Previous analytical result context for memory analysis.",
     )
+    attachments: Optional[list[str]] = Field(
+        default=None,
+        description="Attachment IDs referenced for this question.",
+    )
+    file_context: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured processed attachment context for reasoning.",
+    )
+    conversation_id: Optional[str] = Field(
+        default=None,
+        description="Client conversation/session identifier.",
+    )
+    semantic_context: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Semantic request analysis used for routing and response orchestration.",
+    )
 
 
 class SourceChunk(BaseModel):
@@ -184,4 +200,64 @@ class QueryResponse(BaseModel):
     learned_patterns: Optional[list[dict[str, Any]]] = Field(
         default=None,
         description="Recurring operational patterns learned from persisted findings.",
+    )
+    classifier_intent: Optional[str] = Field(
+        default=None,
+        description="Intent selected by the conversation-aware intent classifier.",
+    )
+    inherited_context: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Conversation context inherited by the resolver/context builder.",
+    )
+    business_findings: Optional[list[str]] = Field(
+        default=None,
+        description="Evidence-backed business findings generated from SQL rows.",
+    )
+    memory_updated: Optional[bool] = Field(
+        default=None,
+        description="Whether semantic conversation memory was updated for this response.",
+    )
+    sql_cache_hit: Optional[bool] = Field(
+        default=None,
+        description="Whether a previous identical SQL response was reused.",
+    )
+    attachment_ids: Optional[list[str]] = Field(
+        default=None,
+        description="Attachment IDs used for this response.",
+    )
+    attachment_filenames: Optional[list[str]] = Field(
+        default=None,
+        description="Human-readable attachment filenames used in the answer.",
+    )
+    data_sources: Optional[list[str]] = Field(
+        default=None,
+        description="Selected evidence sources for this response.",
+    )
+    file_context_summary: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Compact summary of attachment context used in reasoning.",
+    )
+    semantic_domain: Optional[str] = Field(
+        default=None,
+        description="High-level semantic domain for the user request.",
+    )
+    semantic_sub_intent: Optional[str] = Field(
+        default=None,
+        description="Semantic sub-intent such as ranking, detail, or analysis.",
+    )
+    response_mode: Optional[str] = Field(
+        default=None,
+        description="Selected response presentation mode.",
+    )
+    semantic_reasoning: Optional[str] = Field(
+        default=None,
+        description="Semantic analyzer reasoning for routing and response mode.",
+    )
+    suggested_next_steps: Optional[list[str]] = Field(
+        default=None,
+        description="Recommended follow-up questions or actions for the user.",
+    )
+    charts: Optional[list[dict[str, Any]]] = Field(
+        default=None,
+        description="Renderable chart specifications generated from attachment analysis.",
     )

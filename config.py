@@ -46,7 +46,45 @@ EMBED_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "100"))
 # Retrieval
 # ---------------------------------------------------------------------------
 TOP_K_DEFAULT = int(os.getenv("TOP_K_DEFAULT", "5"))
-SIMILARITY_THRESHOLD = 0.40
+SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.40"))
+
+HYBRID_RETRIEVAL_ENABLED = os.getenv("HYBRID_RETRIEVAL_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+HYBRID_DENSE_TOP_K = int(os.getenv("HYBRID_DENSE_TOP_K", "20"))
+HYBRID_BM25_TOP_K = int(os.getenv("HYBRID_BM25_TOP_K", "20"))
+HYBRID_RRF_K = int(os.getenv("HYBRID_RRF_K", "60"))
+HYBRID_RERANK_TOP_N = int(os.getenv("HYBRID_RERANK_TOP_N", "20"))
+HYBRID_RERANK_ENABLED = os.getenv("HYBRID_RERANK_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+HYBRID_RERANKER_MODEL = os.getenv("HYBRID_RERANKER_MODEL", "BAAI/bge-reranker-base")
+HYBRID_QUERY_EXPANSION = os.getenv("HYBRID_QUERY_EXPANSION", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+HYBRID_EXPANSION_USE_LLM = os.getenv("HYBRID_EXPANSION_USE_LLM", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+HYBRID_EXPANSION_MIN_WORDS = int(os.getenv("HYBRID_EXPANSION_MIN_WORDS", "7"))
+HYBRID_EXPANSION_MAX_QUERIES = int(os.getenv("HYBRID_EXPANSION_MAX_QUERIES", "4"))
+HYBRID_RETRIEVAL_DEBUG = os.getenv("HYBRID_RETRIEVAL_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # ---------------------------------------------------------------------------
 # SQL analytics
@@ -76,6 +114,48 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 _log_file = os.getenv("LOG_FILE", "logs/agent.log")
 _log_path = Path(_log_file)
 LOG_FILE = _log_path if _log_path.is_absolute() else PROJECT_ROOT / _log_path
+
+# ---------------------------------------------------------------------------
+# File uploads
+# ---------------------------------------------------------------------------
+_upload_dir = os.getenv("UPLOAD_DIR", "data/uploads")
+_upload_path = Path(_upload_dir)
+UPLOAD_DIR = _upload_path if _upload_path.is_absolute() else PROJECT_ROOT / _upload_path
+
+MAX_UPLOAD_SIZE_MB = int(os.getenv("MAX_UPLOAD_SIZE_MB", "25"))
+MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+ALLOWED_UPLOAD_EXTENSIONS = frozenset(
+    ext.strip().lower()
+    for ext in os.getenv(
+        "ALLOWED_UPLOAD_TYPES",
+        "pdf,csv,xlsx,xls,txt,md,docx,png,jpg,jpeg,webp",
+    ).split(",")
+    if ext.strip()
+)
+
+BLOCKED_UPLOAD_EXTENSIONS = frozenset(
+    {
+        "exe",
+        "dmg",
+        "pkg",
+        "sh",
+        "bat",
+        "dll",
+        "bin",
+        "app",
+        "msi",
+        "deb",
+        "rpm",
+        "js",
+        "jar",
+        "zip",
+        "rar",
+        "7z",
+        "tar",
+        "gz",
+    }
+)
 
 
 def require_openai_api_key() -> str:

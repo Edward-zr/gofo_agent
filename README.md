@@ -70,7 +70,7 @@ The project is functional and has:
 - SQLite long-term memory.
 - Structured conversation state repair.
 - Production configuration, logging, error handling, Docker, and Compose.
-- Current test status from the latest run: `128 passed`.
+- Current test status from the latest run: `179 passed`.
 
 ## SYSTEM ARCHITECTURE
 
@@ -82,12 +82,15 @@ User
   -> FastAPI API layer
   -> SessionManager
   -> GOFOAgent
-  -> Conversation Repair Detector
-  -> ConversationState resolver
-  -> ConversationMemory resolver
-  -> Router
-  -> SQL Analytics and/or SOP RAG
-  -> Root Cause / Anomaly / KPI / Recommendation tools
+  -> Attachment upload/process (optional)
+  -> Conversation Resolver
+  -> Intent Classifier
+  -> Context Builder + File Context Builder
+  -> Data Source Router (SQLITE / RAG / ATTACHMENT / combined)
+  -> Planner / Router OR Attachment Analyzer
+  -> SQL Executor and/or SOP RAG and/or File Processors
+  -> Business Analyzer
+  -> Conversation Memory + Attachment Memory Update
   -> Long-Term Memory retrieval/storage
   -> Structured response
   -> Frontend/API/CLI output
@@ -119,7 +122,8 @@ Active backend:
 - FastAPI app exposing:
   - `GET /health`
   - `GET /`
-  - `POST /ask`
+  - `POST /attachments` (multipart file upload)
+  - `POST /ask` (supports optional `attachments: [attachment_id, ...]`)
 - Uses `api/schemas.py` for public API models.
 - Uses `core.session.SessionManager` to preserve one `GOFOAgent` per `session_id`.
 - Has request logging middleware.
@@ -150,14 +154,18 @@ There are two agent entrypoints:
 
 - `core/agent.py`
   - Production-style wrapper class `GOFOAgent`.
-  - Owns session-scoped `ConversationMemory` and `ConversationState`.
+  - Owns session-scoped `ConversationResolver`, `ConversationMemory`, `ConversationState`, `AttachmentMemory`, and `AttachmentService`.
   - Performs:
-    - repair detection,
-    - structured state resolution,
-    - memory resolution,
+    - attachment upload processing and file context building,
+    - semantic conversation resolution,
+    - intent classification,
+    - context building,
+    - data source routing (SQLITE, RAG, ATTACHMENT, combined),
+    - attachment-aware analysis (CSV/Excel/PDF/DOCX/text/image),
     - result-context routing,
     - `agent.ask()` call,
-    - memory updates,
+    - business reasoning,
+    - semantic and compatibility memory updates,
     - dashboard-friendly response formatting.
 
 Use `core.agent.GOFOAgent` for API/dashboard/production session use. Keep `agent.py` as the low-level core API.
@@ -197,15 +205,97 @@ This preserves:
 - repair memory
 - structured `ConversationState`
 
-### Conversation Memory and Repair Flow
+### Conversational Reasoning Flow
 
 Current agent flow:
 
 ```text
 Question
-  -> Conversation Repair Detector
-  -> ConversationState resolver
-  -> ConversationMemory resolver
+  -> tools.conversation.ConversationResolver
+  -> tools.planner.intent_classifier.classify_intent()
+  -> tools.context.build_context()
+  -> agent.ask() / tools.router.route()
+  -> tools.analyzer.business_reasoner
+  -> semantic memory update
+  -> compatibility memory update
+```
+
+The current production pipeline is:
+
+```text
+Question
+  -> Conversation Resolver
+  -> Intent Classifier
+  -> Context Builder
+  -> Planner
+  -> SQL Executor
+  -> Business Analyzer
+  -> Conversation Memory Update
+  -> Response Formatter
+```
+
+New conversational modules:
+
+- `tools/conversation/resolver.py`
+  - Session-level semantic state owner.
+  - Keeps the last 10 structured turns.
+  - Stores original question, resolved question, intent, metric, dimension, entities, filters, SQL, SQL rows, business findings, KPI summary, ranking, best entity, worst entity, root cause, recommendations, summary, and date range.
+  - Resolves follow-ups such as `why`, `worst hub`, `best driver`, `compare yesterday`, `show details`, and pronouns.
+  - Avoids inheriting stale filters for fresh global ranking questions.
+
+- `tools/planner/intent_classifier.py`
+  - Classifies conversation-aware intents:
+    - `SQL_QUERY`
+    - `SUMMARY`
+    - `ROOT_CAUSE`
+    - `RECOMMENDATION`
+    - `COMPARISON`
+    - `TREND`
+    - `EXPLANATION`
+    - `DRILLDOWN`
+    - `FOLLOWUP`
+    - `CORRECTION`
+    - `CLARIFICATION`
+    - `GREETING`
+    - `UNKNOWN`
+
+- `tools/context/context_builder.py`
+  - Rebuilds missing metric, dimension, date, and target context from semantic memory.
+  - Decides when a response can be answered from previous SQL-backed analysis.
+  - Allows contextual root-cause/recommendation turns to inherit target filters but keeps fresh rankings global unless the user explicitly specifies a filter.
+
+- `tools/analyzer/business_reasoner.py`
+  - Adds evidence-backed executive summaries, operational KPIs, business findings, root-cause metadata, recommendations, and suggested next investigations.
+  - Can answer recommendation/explanation follow-ups from previous SQL evidence without generating new SQL.
+
+Compatibility memory modules still exist:
+
+- `tools/memory/conversation.py`
+  - Short-term memory, recent turns, active entities, previous SQL/result context.
+
+- `tools/memory/state.py`
+  - Structured state memory retained for compatibility with existing tests and debug output.
+
+- `tools/memory/repair.py`
+  - Legacy deterministic repair detector retained for CLI/debug compatibility.
+
+- `tools/memory/resolver.py`
+  - Legacy LLM-based resolver retained as fallback for existing entity-resolution behavior.
+
+Important behavior:
+
+- `worst hub` resolves from semantic ranking memory, not raw text.
+- `What should operations do?` can answer from the previous SQL-backed analysis without new SQL.
+- `Compare yesterday` inherits the previous metric/topic and changes only the period.
+- `Show details` routes through previous result context.
+- Fresh questions like `Which driver has the highest performance?` do not inherit a previous hub filter unless the user explicitly asks for that hub.
+
+Legacy memory flow preserved for compatibility:
+
+```text
+Question
+  -> Semantic Conversation Resolver
+  -> optional ConversationMemory fallback
   -> Router
 ```
 
@@ -564,7 +654,10 @@ gofo_agent/
 │   ├── create_demo_db.py
 │   └── test_queries.py
 ├── tools/
+│   ├── analyzer/
 │   ├── analysis/
+│   ├── context/
+│   ├── conversation/
 │   ├── llm/
 │   ├── memory/
 │   ├── planner/
@@ -748,7 +841,7 @@ Purpose:
   - `QueryRequest`
   - `SourceChunk`
   - `QueryResponse`
-- `QueryResponse` now contains many optional debug/analysis/memory fields.
+- `QueryResponse` now contains optional debug/analysis/memory fields including classifier intent, inherited context, business findings, semantic memory status, and SQL cache hit status.
 
 `core/agent.py`
 
@@ -756,9 +849,10 @@ Purpose:
 
 - Production wrapper `GOFOAgent`.
 - Owns per-session:
+  - `ConversationResolver`
   - `ConversationMemory`
   - `ConversationState`
-- Converts `QueryResponse` into dashboard/API dictionary response.
+- Runs the production conversational pipeline and converts `QueryResponse` into dashboard/API dictionary response.
 
 `core/session.py`
 
@@ -858,6 +952,38 @@ Purpose:
 Purpose:
 
 - LLM synthesis for hybrid SQL + RAG answers.
+
+`tools/conversation/resolver.py`
+
+Purpose:
+
+- Semantic conversation resolver and memory store.
+- Maintains the last 10 structured turns.
+- Resolves follow-up references, corrections, ranking references, pronouns, drilldowns, and comparisons.
+- Extracts rankings, best entity, worst entity, business findings, recommendations, and date/metric/dimension context from responses.
+
+`tools/context/context_builder.py`
+
+Purpose:
+
+- Builds execution-ready context from the semantic resolver.
+- Reconstructs missing metric, dimension, date range, filters, and inherited context.
+- Prevents stale filters from leaking into fresh global rankings.
+
+`tools/analyzer/business_reasoner.py`
+
+Purpose:
+
+- Evidence-based business reasoning layer.
+- Adds executive summary, operational KPI text, business findings, root cause, recommendations, and suggested next investigation.
+- Answers recommendation/explanation follow-ups from prior SQL evidence when no new SQL is needed.
+
+`tools/planner/intent_classifier.py`
+
+Purpose:
+
+- Context-aware intent classifier for conversational operations questions.
+- Supports `SQL_QUERY`, `SUMMARY`, `ROOT_CAUSE`, `RECOMMENDATION`, `COMPARISON`, `TREND`, `EXPLANATION`, `DRILLDOWN`, `FOLLOWUP`, `CORRECTION`, `CLARIFICATION`, `GREETING`, and `UNKNOWN`.
 
 `tools/llm/client.py`
 
@@ -1199,6 +1325,38 @@ How it works:
 - `ConversationState` tracks intent, metric, dimension, sort direction, filters, SQL, and result summary.
 - Corrections like `actually lowest driver` are resolved from state before entity memory can reuse the old driver.
 
+### Production Conversational Reasoning Pipeline
+
+Status:
+
+- Done.
+
+Files:
+
+- `tools/conversation/resolver.py`
+- `tools/planner/intent_classifier.py`
+- `tools/context/context_builder.py`
+- `tools/analyzer/business_reasoner.py`
+- `core/agent.py`
+- `tests/test_conversational_pipeline.py`
+
+Description:
+
+- Refactors `GOFOAgent` into a staged conversational operations analyst pipeline.
+- Semantic memory now stores meaning, including rankings, best/worst entities, filters, SQL rows, findings, recommendations, and summaries.
+- Follow-up questions such as `Why?`, `What should operations do?`, `Compare yesterday`, and `Show details` are resolved from structured state.
+- Recommendation and explanation follow-ups can be answered from previous SQL evidence without generating new SQL.
+- Fresh global ranking questions do not inherit stale entity filters unless explicitly specified.
+
+How it works:
+
+- `ConversationResolver` resolves conversational meaning and records semantic state.
+- `IntentClassifier` classifies the user turn with context.
+- `ContextBuilder` reconstructs missing metric/dimension/date/filter information.
+- Existing `agent.ask()` and `tools.router.route()` still execute SQL/RAG.
+- `BusinessReasoner` adds executive summaries, business findings, recommendations, and next-investigation guidance.
+- Semantic memory and legacy memory are both updated for backward compatibility.
+
 ### Conversation Repair Detector
 
 Status:
@@ -1410,6 +1568,7 @@ Run:
 
 ```bash
 .venv/bin/pytest tests/ -q
+python -m pytest tests/ -q
 ```
 
 ## CURRENT TECH STACK
@@ -1613,7 +1772,7 @@ curl -X POST http://localhost:8000/ask \
 Main dashboard:
 
 ```bash
-streamlit run frontend/app.py
+PYTHONPATH=. streamlit run frontend/app.py
 ```
 
 Open:
@@ -1672,7 +1831,7 @@ Run all tests:
 Recent validation:
 
 ```text
-128 passed
+179 passed
 ```
 
 ## CURRENT STATUS
@@ -1709,6 +1868,11 @@ Recent validation:
 - Result context memory.
 - Conversation repair detector.
 - Structured `ConversationState`.
+- Semantic `ConversationResolver`.
+- Context-aware intent classifier.
+- Context builder for follow-up reconstruction and stale-filter prevention.
+- Evidence-based business reasoner.
+- SQL cache support for identical semantic requests.
 - FastAPI session memory through `SessionManager`.
 - SQLite long-term memory.
 - Learned pattern storage.
@@ -1721,33 +1885,48 @@ Recent validation:
 - Dockerfile.
 - Docker Compose.
 - Broad test coverage.
+- End-to-end file and image upload intelligence pipeline:
+  - `POST /attachments` multipart upload API with validation and persistent storage (`data/uploads/`)
+  - `tools/files/` processors for CSV, Excel, PDF, DOCX, TXT/MD, and images (multimodal vision)
+  - `tools/context/file_context_builder.py` for compact attachment context
+  - `tools/files/source_router.py` for SQLITE / RAG / ATTACHMENT / combined routing
+  - `tools/files/attachment_memory.py` for conversational file reference resolution
+  - `tools/files/analyzer.py` for file analysis, multi-file comparison, database comparison, and RAG comparison
+  - Streamlit `+` attachment button with chips, upload-on-select, and chat history display
+  - Configurable upload limits via `UPLOAD_DIR`, `MAX_UPLOAD_SIZE_MB`, `ALLOWED_UPLOAD_TYPES`
+  - `tests/test_attachments.py` covering processors, API, memory, and required conversation flows
 
 ### IN PROGRESS
 
 - Real-world prompt quality and SQL accuracy should continue to be monitored.
 - Long-term memory retrieval is keyword/entity based, not vector based.
-- Conversation repair is deterministic for known correction patterns, but should be expanded carefully as new failures are observed.
-- The repo folder is not currently a git repository in this environment, so git status/commits are unavailable unless initialized elsewhere.
+- Conversational reasoning is now semantic-state based, but additional real-world phrasing should be added through generalized state/context improvements rather than one-off bug patches.
+- `ConversationMemory` and `ConversationState` remain for compatibility while `ConversationResolver` is the new semantic source of truth.
 
 ### NEXT DEVELOPMENT TASKS
 
 Recommended next work:
 
-1. Run manual end-to-end smoke tests in the Streamlit dashboard:
+1. Run longer manual end-to-end smoke tests in the Streamlit dashboard:
    - `Highest performing driver`
    - `Which hub does he belong to?`
    - `Actually I mean lowest driver`
    - `Rank all hubs by performance`
    - `Why is the worst hub performing badly?`
+   - `What should operations do?`
+   - `Compare yesterday`
+   - `Show details`
+   - `Actually compare last week`
    - `What is pickup SOP?`
    - `How are operations today?`
 
-2. Add deterministic tests for real API responses using mocked `ask_core` for:
+2. Add more deterministic tests for real API responses using mocked `ask_core` for:
    - session isolation between different `session_id` values,
-   - state repair after multiple turns,
-   - result-table follow-ups through API.
+   - multi-turn recommendation/explanation chains,
+   - result-table drilldowns through API,
+   - SQL cache reuse.
 
-3. Expand `ConversationState` carefully for more repair patterns:
+3. Expand semantic conversation resolution carefully for more patterns:
    - date corrections,
    - metric corrections,
    - dimension corrections with active filters.
@@ -1759,11 +1938,50 @@ Recommended next work:
 
 5. Consider deterministic SQL templates for common KPI/ranking queries if LLM SQL planning quality becomes inconsistent.
 
-6. Review `.env.example` and local secrets before sharing the repo. Rotate any exposed key.
+6. Rotate any API key that may have previously appeared in `.env.example` or logs. The current `.env.example` is placeholder-only.
 
 7. Keep updating this README after major architecture or behavior changes.
 
 ## BUG HISTORY & FIXES
+
+### Conversational Reasoning Was Too Rule-Patch Driven
+
+Problem:
+
+- Direct SQL questions worked, but conversational reasoning degraded across follow-ups.
+- Examples included:
+  - `Why is the worst hub performing badly?` not resolving from the previous hub ranking.
+  - `What should operations do?` not using prior analysis.
+  - `Compare yesterday` not inheriting the previous operational topic.
+  - `Show details` not reliably using previous result context.
+  - Fresh driver rankings risking accidental stale filter inheritance.
+
+Fix:
+
+- Added the production conversational pipeline:
+  - `ConversationResolver`
+  - `IntentClassifier`
+  - `ContextBuilder`
+  - `BusinessReasoner`
+- Semantic conversation state now stores meaning, not only text.
+- Rankings produce `best_entity` and `worst_entity` for later references.
+- Contextual recommendations/explanations can answer from previous SQL evidence without new SQL.
+- Global ranking questions intentionally avoid inherited filters unless the user explicitly names the filter.
+- CLI/API debug payloads now include intent, inherited context, business findings, memory update status, and SQL cache hit status.
+
+Files changed:
+
+- `tools/conversation/resolver.py`
+- `tools/conversation/__init__.py`
+- `tools/planner/intent_classifier.py`
+- `tools/context/context_builder.py`
+- `tools/context/__init__.py`
+- `tools/analyzer/business_reasoner.py`
+- `tools/analyzer/__init__.py`
+- `core/agent.py`
+- `core/models.py`
+- `cli/display.py`
+- `tests/test_conversational_pipeline.py`
 
 ### SQL Planner Did Not Know Schema
 

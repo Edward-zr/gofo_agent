@@ -16,6 +16,32 @@ class AskRequest(BaseModel):
         min_length=1,
         description="Client conversation session identifier.",
     )
+    attachments: list[str] = Field(
+        default_factory=list,
+        description="Attachment IDs to include with this question.",
+    )
+
+
+class AttachmentInfo(BaseModel):
+    """Uploaded attachment metadata returned to clients."""
+
+    attachment_id: str
+    filename: str
+    original_filename: str
+    content_type: str | None = None
+    file_type: str
+    file_size: int
+    processing_status: str
+    uploaded_at: str
+    conversation_id: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    error_message: str | None = None
+
+
+class AttachmentUploadResponse(BaseModel):
+    """Response for one or more uploaded attachments."""
+
+    attachments: list[AttachmentInfo] = Field(default_factory=list)
 
 
 class AskResponse(BaseModel):
@@ -28,6 +54,7 @@ class AskResponse(BaseModel):
     analysis: dict[str, Any] = Field(default_factory=dict)
     recommendations: list[str] = Field(default_factory=list)
     kpi: dict[str, Any] = Field(default_factory=dict)
+    charts: list[dict[str, Any]] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)
 
 

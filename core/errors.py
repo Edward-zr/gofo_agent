@@ -25,3 +25,11 @@ class MemoryError(AgentError):
 
 class ConfigurationError(AgentError):
     """Missing or invalid system configuration."""
+
+
+class FileError(AgentError):
+    """File upload or processing failure."""
+
+
+class UnsupportedFileError(FileError):
+    """Unsupported or rejected file type."""

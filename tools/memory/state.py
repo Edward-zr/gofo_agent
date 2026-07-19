@@ -34,6 +34,15 @@ class ConversationState:
     last_entities: dict[str, Any] = field(default_factory=dict)
     last_sql: str | None = None
     last_result_summary: str | None = None
+    last_route: str | None = None
+    last_attachment: str | None = None
+    last_attachment_summary: str | None = None
+    last_sql_result: list[dict[str, Any]] | None = None
+    last_sop_query: str | None = None
+    last_visualization: str | None = None
+    last_topic: str | None = None
+    attachment_active: bool = False
+    last_attachment_file_types: list[str] = field(default_factory=list)
 
     def snapshot(self) -> dict[str, Any]:
         """Return a serializable copy of the current state."""
@@ -48,6 +57,15 @@ class ConversationState:
             "last_entities": deepcopy(self.last_entities),
             "last_sql": self.last_sql,
             "last_result_summary": self.last_result_summary,
+            "last_route": self.last_route,
+            "last_attachment": self.last_attachment,
+            "last_attachment_summary": self.last_attachment_summary,
+            "last_sql_result": deepcopy(self.last_sql_result),
+            "last_sop_query": self.last_sop_query,
+            "last_visualization": self.last_visualization,
+            "last_topic": self.last_topic,
+            "attachment_active": self.attachment_active,
+            "last_attachment_file_types": list(self.last_attachment_file_types),
         }
 
     def resolve(self, question: str) -> dict[str, Any]:
@@ -80,6 +98,7 @@ class ConversationState:
         user_question: str,
         resolved_question: str,
         response: QueryResponse,
+        route_decision: dict[str, Any] | None = None,
     ) -> None:
         """Update structured state from a completed turn."""
         self.last_question = user_question
@@ -92,6 +111,28 @@ class ConversationState:
         self.last_entities = dict(response.planning_entities or {})
         self.last_sql = response.generated_sql
         self.last_result_summary = response.answer
+        self.last_sql_result = list(response.sql_rows or []) or self.last_sql_result
+        self.last_topic = route_decision.get("intent") if route_decision else self.last_intent
+        if route_decision:
+            self.last_route = route_decision.get("intent")
+            self.attachment_active = bool(route_decision.get("attachment_active"))
+            if route_decision.get("chart_type"):
+                self.last_visualization = route_decision["chart_type"]
+            if route_decision.get("intent") == "SOP_QA":
+                self.last_sop_query = resolved_question
+        attachment_filenames = response.attachment_filenames or []
+        attachment_ids = response.attachment_ids or []
+        if attachment_ids:
+            self.last_attachment = attachment_ids[-1]
+        elif attachment_filenames:
+            self.last_attachment = attachment_filenames[-1]
+        if response.file_context_summary:
+            summaries = response.file_context_summary.get("summaries") or []
+            if summaries:
+                self.last_attachment_summary = summaries[-1]
+            file_types = response.file_context_summary.get("file_types") or []
+            if file_types:
+                self.last_attachment_file_types = list(file_types)
 
     def _resolve_repair(self, question: str, normalized: str) -> dict[str, Any] | None:
         dimension = _mentioned_dimension(normalized) or self.last_dimension

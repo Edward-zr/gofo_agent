@@ -9,6 +9,7 @@ from core.errors import (
     AgentError,
     ConfigurationError,
     DatabaseError,
+    FileError,
     MemoryError,
     PlannerError,
     RetrievalError,
@@ -27,6 +28,8 @@ def handle_error(error: Exception) -> str:
         return "I could not plan this operational query."
     if isinstance(error, MemoryError):
         return "I could not access conversation memory."
+    if isinstance(error, FileError):
+        return str(error) or "Attachment processing failed."
     if _looks_like_openai_error(error):
         return "The AI service is temporarily unavailable."
     if isinstance(error, AgentError):
