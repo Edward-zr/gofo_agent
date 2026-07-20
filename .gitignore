@@ -3,8 +3,6 @@ __pycache__/
 
 .pytest_cache/
 
-.env
-
 logs/
 
 .venv/
@@ -15,3 +13,9 @@ env/
 
 chroma_db/
 .DS_Store
+
+.env
+
+data/uploads/
+data/memory.db
+

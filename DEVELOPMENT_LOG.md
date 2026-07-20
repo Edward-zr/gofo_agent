@@ -260,3 +260,198 @@ pytest tests/ -q
 ---
 
 *End of session 2026-07-19.*
+
+---
+
+# Session — 2026-07-19 (Intent Classifier + Planning Layer)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-19 |
+| **Branch** | `cursor-memory-version` |
+| **Overall objective** | Add a dedicated Intent Classifier and multi-step Planning Layer as the first stages of the agent pipeline, separating planning from execution (no LangGraph) |
+| **Tests** | `280 passed` |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **`core/intent_classifier.py`**
+   - `IntentType` enum (Greeting, ChitChat, SOP_*, SQL_*, Dashboard, Follow_Up, Upload_File, Coding, Unknown, …)
+   - `IntentClassification` structured output (confidence, tool flags, clarification, debug reasoning)
+   - Heuristics for greetings/SOP/SQL/dashboard/upload/follow-ups; GPT fallback via `get_llm()`
+   - Confidence < 0.5 → Unknown + clarification
+   - `DEBUG` dumps for intent/tools/memory/planner flags
+
+2. **`core/planner.py`**
+   - `ExecutionStep` / `ExecutionPlan` / `ToolName` / `Planner`
+   - Deterministic templates for common intents; LLM planner when no template
+   - Never answers users; never executes tools
+   - Clarification plans when confidence is low
+
+3. **`core/plan_executor.py`**
+   - Dependency-ordered tool registry (SQL, RAG, MEMORY, PYTHON, VISUALIZATION, ATTACHMENT, LLM)
+   - Unknown future tools skipped safely
+   - Reuses substantive SQL/RAG/attachment answers for summarize steps to avoid redundant LLM calls
+
+4. **Agent wiring (`core/agent.py`)**
+   - Pipeline: classify → IntentRouter (attachments) → plan → PlanExecutor (SQL_Analysis / Dashboard / SOP_Compare) or RouteDispatcher
+   - Business `classifier_intent` preserved; new taxonomy in `intent_classification`
+   - Flags: `INTENT_CLASSIFIER_ENABLED`, `PLANNER_ENABLED`, `DEBUG`
+
+5. **Tests**
+   - `tests/test_core_intent_classifier.py`
+   - `tests/test_core_planner.py`
+   - `tests/test_plan_executor.py`
+   - `tests/conftest.py` disables `PLANNER_ENABLED` by default so legacy agent integration tests keep using RouteDispatcher
+
+### Important decisions
+
+- No LangGraph — modular stages only
+- Keep `tools/planner/*` capability planner and `IntentRouter` attachment semantics
+- Planner execution is feature-flagged; classification always enriches response metadata when enabled
+
+### Remaining / next
+
+- Opt more intents (Follow_Up, Upload_File) into PlanExecutor without regressing conversation repair
+- Session cache invalidation for stale DataFrames (prior session recommendation)
+- Chart defaults for Chinese logistics columns
+
+---
+
+*End of session 2026-07-19 (planning layer).*
+
+---
+
+# Session — 2026-07-19 (Quality Assurance Pipeline)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-19 |
+| **Branch** | `cursor-memory-version` |
+| **Overall objective** | Replace simple reflection with a multi-stage QA pipeline (evidence / reasoning / completeness + DecisionEngine) and bounded planner retries |
+| **Tests** | `tests/test_quality_assurance.py` (13 passed) + prior suite green with QA disabled by default in conftest |
+
+---
+
+## Work Completed
+
+1. **`core/quality_assurance.py`**
+   - `EvidenceValidator`, `ReasoningValidator`, `CompletenessValidator`
+   - `DecisionEngine` + `QualityReport` + `QAAction`
+   - `QualityAssurancePipeline` with `register_validator()` for future validators
+   - Never generates answers; never executes tools
+
+2. **Planner retry**
+   - `Planner.plan_retry(...)` builds additional SQL/RAG/Python/LLM steps from QA feedback
+
+3. **Agent wiring**
+   - After generation: QA evaluate → optional retry loop (max `QA_MAX_RETRIES`, default 2)
+   - Clarification path when DecisionEngine asks the user
+   - Response fields: `quality_report`, `qa_retry_count`
+
+4. **Config**
+   - `QUALITY_ASSURANCE_ENABLED`, `QA_MAX_RETRIES`, `QA_SCORE_THRESHOLD`, `QA_APPROVE_THRESHOLD`
+   - Tests disable QA by default (same pattern as planner execution)
+
+### Decisions
+
+- No LangGraph — modular stages only; QA updates report state for the agent loop
+- Decision priority: ask_user → approve (high scores) → accept_with_limits (retry cap) → retry_retrieval / retry_plan / retry_sql / retry_python
+
+### Next
+
+- Opt-in agent integration tests for successful QA retry with mocked tools
+- Additional validators (citation, PII, SQL safety) via `register_validator`
+
+---
+
+*End of session 2026-07-19 (QA pipeline).*
+
+---
+
+# Session — 2026-07-19 (Reflection / Self-Critique)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-19 |
+| **Branch** | `cursor-memory-version` |
+| **Overall objective** | Add a dedicated Reflection (self-critique) layer that never generates answers and drives Planner retries |
+| **Tests** | `tests/test_reflection.py` + QA suite green |
+
+---
+
+## Work Completed
+
+1. **`core/reflection.py`**
+   - `ReflectionResult` structured critique output
+   - `ReflectionAgent.critique` / `critique_response`
+   - Uses existing QA validators under the hood; optional LLM merge (`REFLECTION_USE_LLM`)
+   - Never generates final answers; never executes tools
+
+2. **Agent wiring**
+   - Primary critic path: `REFLECTION_ENABLED` → critique → `Planner.plan_retry` → regenerate (max 2)
+   - Falls back to direct QA loop only when reflection is disabled
+   - Response fields: `reflection_result`, `reflection_retry_count`
+
+3. **Config**
+   - `REFLECTION_ENABLED`, `REFLECTION_USE_LLM`, `REFLECTION_MAX_RETRIES`
+   - Tests disable reflection by default in conftest
+
+### Decisions
+
+- Reflection is the product-facing critic API; QA remains the multi-dimension validator engine
+- No LangGraph — modular stages only
+
+---
+
+*End of session 2026-07-19 (reflection).*
+
+---
+
+# Session — 2026-07-19 (Tool Orchestrator)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-19 |
+| **Branch** | `cursor-memory-version` |
+| **Overall objective** | Add a Tool Orchestration layer that executes Planner plans with sequential/parallel waves, dependencies, retries, and AgentState |
+| **Tests** | `tests/test_tool_orchestrator.py` + plan executor suite green |
+
+---
+
+## Work Completed
+
+1. **`core/tool_orchestrator.py`**
+   - `ToolRegistry`, `ToolExecutor`, `ToolOrchestrator`
+   - `ExecutionContext`, `ExecutionResult` (per step), `AgentState`, `OrchestrationResult`
+   - Dependency waves: independent steps run in parallel (`ThreadPoolExecutor`)
+   - Transient error retry (once); non-retryable errors fail fast
+   - Extensible `register_tool()` for Snowflake/etc. without changing orchestration logic
+   - Never makes planning decisions
+
+2. **Integration**
+   - `PlanExecutor` delegates to `ToolOrchestrator` when enabled and using the default tool registry
+   - Custom registries (tests/mocks) keep the legacy sequential path
+   - Config: `TOOL_ORCHESTRATOR_ENABLED`, `TOOL_ORCHESTRATOR_PARALLEL`, `TOOL_ORCHESTRATOR_MAX_WORKERS`
+   - `QueryResponse.agent_state` exposed in API analysis payload
+
+### Decisions
+
+- Planner = WHAT; Orchestrator = HOW
+- No LangGraph — modular node-ready stages only
+- Parallel workers do not mutate AgentState; main thread commits results
+
+---
+
+*End of session 2026-07-19 (tool orchestrator).*

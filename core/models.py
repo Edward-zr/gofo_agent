@@ -261,3 +261,35 @@ class QueryResponse(BaseModel):
         default=None,
         description="Renderable chart specifications generated from attachment analysis.",
     )
+    execution_plan: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured multi-step execution plan produced by the core Planner.",
+    )
+    step_results_summary: Optional[list[dict[str, Any]]] = Field(
+        default=None,
+        description="Compact per-step execution trace from the PlanExecutor.",
+    )
+    intent_classification: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured output from the core IntentClassifier.",
+    )
+    quality_report: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured multi-stage QA report for the generated answer.",
+    )
+    qa_retry_count: Optional[int] = Field(
+        default=None,
+        description="Number of QA-driven planner retries performed for this answer.",
+    )
+    reflection_result: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Structured self-critique from the ReflectionAgent.",
+    )
+    reflection_retry_count: Optional[int] = Field(
+        default=None,
+        description="Number of reflection-driven planner retries for this answer.",
+    )
+    agent_state: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Orchestrator AgentState snapshot (sql/docs/python/charts/log).",
+    )

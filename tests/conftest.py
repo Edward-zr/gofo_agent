@@ -28,6 +28,34 @@ def clear_module_caches() -> None:
 
 
 @pytest.fixture(autouse=True)
+def disable_planner_execution_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep legacy RouteDispatcher as the agent executor in most tests.
+
+    Unit tests exercise Planner/PlanExecutor directly. Opt into agent-level
+    planner execution with monkeypatch.setattr(config, "PLANNER_ENABLED", True).
+    """
+    monkeypatch.setattr("config.PLANNER_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def disable_quality_assurance_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable QA retries in agent integration tests by default.
+
+    Unit tests cover QualityAssurancePipeline directly.
+    """
+    monkeypatch.setattr("config.QUALITY_ASSURANCE_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def disable_reflection_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable Reflection retries in agent integration tests by default.
+
+    Unit tests cover ReflectionAgent directly.
+    """
+    monkeypatch.setattr("config.REFLECTION_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
 def mock_semantic_orchestration(monkeypatch: pytest.MonkeyPatch) -> None:
     """Provide deterministic semantic analysis during agent and router tests."""
 

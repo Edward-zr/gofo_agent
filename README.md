@@ -27,8 +27,8 @@ Give operations users one chat surface for:
 **Active feature branch, production-style local/Docker service.**
 
 - Core agent, API, Streamlit UI, memory, hybrid RAG, attachments, and matplotlib charts are implemented and tested.
-- Latest commit on this branch: `2eb2622` — attachment ADA analysis, hybrid RAG routing, Excel row-fix, matplotlib charts.
-- Test status (2026-07-19): **`250 passed`**.
+- Latest work on this branch: intent classifier + multi-step planning layer (`core/intent_classifier.py`, `core/planner.py`, `core/plan_executor.py`).
+- Test status (2026-07-19): **`280 passed`**.
 
 ---
 
@@ -62,19 +62,25 @@ Relative to the initial checkpoint on `main` / early history, this branch adds:
 User (Streamlit / CLI)
   → FastAPI (session_id → SessionManager → GOFOAgent)
   → optional AttachmentService.process (upload)
-  → IntentRouter.route(question, ConversationState, attachments?)
-  → RouteDispatcher
-       ├─ GENERAL_CHAT / OPENAI_FALLBACK
-       ├─ SOP_QA → Hybrid RAG (Chroma + BM25 + RRF + rerank) → generator
-       ├─ SQL_ANALYTICS → SQL planner/executor → business analysis
-       ├─ ATTACHMENT_ANALYSIS / VISUALIZATION → DataFrame store → analyze_dataframe → matplotlib charts
-       ├─ WAIT_FOR_UPLOAD → ask user to attach a file
-       └─ FOLLOW_UP → resolve against prior route/entities/state
+  → IntentClassifier.classify(question, ConversationMemory)   # primary intent + tool flags
+  → IntentRouter.route(...)   # attachment activate/detach + WAIT_FOR_UPLOAD
+  → Planner.plan(question, classification, memory)            # ExecutionPlan (no answers)
+  → ToolOrchestrator.run(plan)   # sequential / parallel waves + AgentState
+       └─ PlanExecutor adapts to orchestrator (or legacy sequential fallback)
+       └─ else RouteDispatcher (single-route legacy path)
+  → Generator answer (SQL/RAG/LLM synthesis)
+  → ReflectionAgent.critique(answer, evidence)   # never writes the final answer
+       └── uses QualityAssurance validators (evidence / reasoning / completeness)
+  → Decision: approve | retry retrieval/SQL/python | ask user
+  → optional Planner.plan_retry → PlanExecutor → regenerate (max REFLECTION_MAX_RETRIES)
   → ConversationMemory + ConversationState + AttachmentMemory update
-  → Long-term memory (SQLite) read/write when applicable
-  → QueryResponse / AskResponse (answer, sql, data, kpi, charts, sources)
+  → QueryResponse / AskResponse (answer, sql, data, kpi, charts, sources, plan, quality_report)
   → Streamlit renders text + KPI + chart PNGs
 ```
+
+Planning and execution are separated: the Planner never answers the user and never runs tools.
+QA never generates answers and never executes tools — it only returns a `QualityReport`.
+There is **no LangGraph** dependency; stages are modular so a future graph could wrap the same modules.
 
 ## Frontend
 
@@ -101,10 +107,16 @@ Frontend talks only to FastAPI (`API_BASE_URL`, default `http://localhost:8000`)
 
 | Component | Path | Role |
 |-----------|------|------|
-| Agent facade | `core/agent.py` | `GOFOAgent.ask()` — wires router, memory, attachments, dispatcher |
-| Intent router | `core/intent_router.py` | Routes: `GENERAL_CHAT`, `SOP_QA`, `SQL_ANALYTICS`, `ATTACHMENT_*`, `WAIT_FOR_UPLOAD`, `FOLLOW_UP`, `OPENAI_FALLBACK` |
-| Dispatcher | `core/route_dispatcher.py` | Executes the chosen route |
-| Models | `core/models.py` | `QueryResponse` including `charts` |
+| Agent facade | `core/agent.py` | `GOFOAgent.ask()` — classify → plan → execute/dispatch |
+| Intent classifier | `core/intent_classifier.py` | GPT + heuristics → `IntentClassification` (primary intent, confidence, tool flags) |
+| Planner | `core/planner.py` | Multi-step `ExecutionPlan` / `ExecutionStep` (never executes) |
+| Tool orchestrator | `core/tool_orchestrator.py` | Executes plans with parallel waves, deps, retries, AgentState |
+| Plan executor | `core/plan_executor.py` | Adapter to ToolOrchestrator (+ legacy sequential fallback) |
+| Reflection (critic) | `core/reflection.py` | Self-critique layer; returns `ReflectionResult` for Planner retries |
+| Quality assurance | `core/quality_assurance.py` | Evidence / reasoning / completeness validators + DecisionEngine |
+| Intent router | `core/intent_router.py` | Attachment activate/detach + WAIT_FOR_UPLOAD + legacy single-route decisions |
+| Dispatcher | `core/route_dispatcher.py` | Executes one route when planner execution is not used |
+| Models | `core/models.py` | `QueryResponse` including `charts`, `execution_plan`, `intent_classification` |
 | Errors / logging | `core/errors.py`, `error_handler.py`, `logger.py` | Production error types and logging |
 
 Supporting conversational layers:
@@ -215,8 +227,14 @@ gofo_agent/
 | File | Responsibility |
 |------|----------------|
 | `core/agent.py` | Orchestrates ask path; must stay the single agent facade |
-| `core/intent_router.py` | Central route decisions; attachment activate/detach |
-| `core/route_dispatcher.py` | Executes routes without duplicating planner logic |
+| `core/intent_classifier.py` | Primary intent classification (GPT + heuristics) |
+| `core/planner.py` | Multi-step ExecutionPlan generation (never executes) |
+| `core/tool_orchestrator.py` | ToolRegistry / ToolExecutor / parallel orchestration + AgentState |
+| `core/plan_executor.py` | Executes planned tool steps (delegates to ToolOrchestrator) |
+| `core/reflection.py` | ReflectionAgent / ReflectionResult self-critique (no answer generation) |
+| `core/quality_assurance.py` | Multi-stage QA validators + DecisionEngine (no tool execution) |
+| `core/intent_router.py` | Attachment activate/detach + legacy single-route decisions |
+| `core/route_dispatcher.py` | Executes one route when planner execution is not used |
 | `tools/files/excel_reader.py` | Shared robust Excel IO for preview + analysis |
 | `tools/files/charts.py` | Matplotlib PNG generation (`image_base64`) |
 | `tools/files/data_analysis.py` | ADA-style per-prompt DataFrame analysis |
@@ -242,6 +260,12 @@ gofo_agent/
 | Conversation state / repair | Corrections, ranking direction, route fields | `tools/memory/state.py`, `tools/conversation/` | **Complete** |
 | Long-term memory | SQLite conversations/findings/patterns | `tools/memory/long_memory.py`, `database.py` | **Complete** |
 | Centralized intent router | Deterministic multi-route dispatch | `core/intent_router.py`, `route_dispatcher.py` | **Complete** |
+| Intent classifier | GPT + heuristics primary intent | `core/intent_classifier.py` | **Complete** |
+| Multi-step planner | ExecutionPlan with dependencies | `core/planner.py` | **Complete** |
+| Plan executor | Tool registry + step execution | `core/plan_executor.py` | **Complete** |
+| Tool orchestrator | Sequential/parallel multi-tool execution | `core/tool_orchestrator.py` | **Complete** |
+| Quality assurance | Evidence / reasoning / completeness + retries | `core/quality_assurance.py` | **Complete** |
+| Reflection critic | Self-critique + planner feedback (no answer generation) | `core/reflection.py` | **Complete** |
 | File upload pipeline | Validate → process → memory | `tools/files/*`, `api/server.py` | **Complete** |
 | Attachment preview | Sheet-aware Excel/CSV/PDF/image modal | `frontend/attachment_preview.py` | **Complete** |
 | ADA file analysis | Fresh analysis per prompt on stored DataFrame | `data_analysis.py`, `analysis_intent.py` | **Complete** |
@@ -323,6 +347,19 @@ Copy from `.env.example`. Critical keys:
 | `UPLOAD_DIR` / `MAX_UPLOAD_SIZE_MB` / `ALLOWED_UPLOAD_TYPES` | Attachments |
 | `HYBRID_RETRIEVAL_ENABLED` | Hybrid RAG on/off |
 | `HYBRID_RERANKER_MODEL` | Default `BAAI/bge-reranker-base` |
+| `DEBUG` | Print classifier/planner debug dumps |
+| `INTENT_CLASSIFIER_ENABLED` | Run `core.intent_classifier` (default true) |
+| `PLANNER_ENABLED` | Execute multi-step plans via `PlanExecutor` (default true; tests disable by default) |
+| `QUALITY_ASSURANCE_ENABLED` | Run QA pipeline after generation (default true; tests disable by default) |
+| `QA_MAX_RETRIES` | Max planner retries from QA (default `2`) |
+| `QA_SCORE_THRESHOLD` | Retry threshold per dimension (default `0.75`) |
+| `QA_APPROVE_THRESHOLD` | Immediate-approve threshold (default `0.85`) |
+| `REFLECTION_ENABLED` | Run ReflectionAgent after generation (default true; tests disable by default) |
+| `REFLECTION_USE_LLM` | Optional LLM critic merge (default false) |
+| `REFLECTION_MAX_RETRIES` | Max reflection-driven planner retries (default `2`) |
+| `TOOL_ORCHESTRATOR_ENABLED` | Use ToolOrchestrator for plan execution (default true) |
+| `TOOL_ORCHESTRATOR_PARALLEL` | Run independent steps in parallel (default true) |
+| `TOOL_ORCHESTRATOR_MAX_WORKERS` | Thread pool size for parallel waves (default `4`) |
 | `API_BASE_URL` | Streamlit → API (Compose sets `http://gofo-api:8000`) |
 | `MPLCONFIGDIR` | Writable matplotlib cache (Compose: `/tmp/matplotlib`) |
 
@@ -390,6 +427,10 @@ These are intentional. Future agents should **not** reverse them without an expl
 1. **Single-agent modular tools, not multi-agent / LangGraph** — keep one `GOFOAgent` and tool modules.
 2. **Thin API/UI** — all intelligence lives under `core/` + `tools/`.
 3. **Centralized IntentRouter** — attachment mode is session-scoped and can detach on SQL/chat; do not permanently hijack the session after upload.
+3b. **Classify → Plan → Execute** — `IntentClassifier` decides *what*; `Planner` decides *how* (steps only); `PlanExecutor` / `RouteDispatcher` run tools. Planner never answers users.
+3c. **QA evaluates, never answers** — Evidence / Reasoning / Completeness validators + DecisionEngine; retries go back through Planner (max 2).
+3d. **Reflection is the primary critic** — `ReflectionAgent` critiques drafts only; feedback goes to `Planner.plan_retry` (never executes tools).
+3e. **ToolOrchestrator executes plans** — Planner decides WHAT; orchestrator decides HOW (deps, parallel waves, retries). No planning inside the orchestrator.
 4. **Shared AttachmentService in API process** — session agents must reuse the same upload index.
 5. **Parse-once ADA** — store DataFrame in memory; run fresh `analyze_dataframe` per prompt (not canned reuse).
 6. **Matplotlib server-side charts** — return `image_base64` PNGs; UI renders with `st.image`. Do not go back to Streamlit-native charts as the primary path.
@@ -410,12 +451,17 @@ These are intentional. Future agents should **not** reverse them without an expl
 - Attachment upload + preview + ADA analysis
 - Hybrid RAG (dense + BM25 + RRF + rerank)
 - Centralized intent routing
+- Intent classifier (`core/intent_classifier.py`) + multi-step planner/executor
+- Multi-stage Quality Assurance pipeline (`core/quality_assurance.py`) with bounded retries
+- Reflection / self-critique layer (`core/reflection.py`) feeding Planner retries
+- Tool Orchestrator (`core/tool_orchestrator.py`) for sequential/parallel multi-tool plans
 - Excel full-row reader
 - Matplotlib visualization pipeline + CJK fonts in Docker
 - Documentation refresh (this README + DEVELOPMENT_LOG)
 
 ## In Progress
 
+- Broaden PlanExecutor coverage for Follow_Up / Upload_File without regressing conversation repair
 - Hardening chart defaults for Chinese logistics columns (city/status/driver) after multi-row loads
 - Clearing stale attachment/DataFrame caches across long-lived Docker sessions when re-uploading the same logical file
 
@@ -458,4 +504,4 @@ These are intentional. Future agents should **not** reverse them without an expl
 
 ---
 
-*Last updated: 2026-07-19 — branch `cursor-memory-version`.*
+*Last updated: 2026-07-19 — branch `cursor-memory-version` (classifier + planner + orchestrator + QA + reflection).*

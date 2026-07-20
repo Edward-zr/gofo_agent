@@ -108,12 +108,73 @@ API_HOST = os.getenv("API_HOST", "0.0.0.0")
 API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # ---------------------------------------------------------------------------
-# Logging
+# Logging / debug
 # ---------------------------------------------------------------------------
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 _log_file = os.getenv("LOG_FILE", "logs/agent.log")
 _log_path = Path(_log_file)
 LOG_FILE = _log_path if _log_path.is_absolute() else PROJECT_ROOT / _log_path
+
+DEBUG = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes", "on"}
+
+# ---------------------------------------------------------------------------
+# Intent classifier + multi-step planner
+# ---------------------------------------------------------------------------
+INTENT_CLASSIFIER_ENABLED = os.getenv("INTENT_CLASSIFIER_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+PLANNER_ENABLED = os.getenv("PLANNER_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+# ---------------------------------------------------------------------------
+# Quality assurance pipeline
+# ---------------------------------------------------------------------------
+QUALITY_ASSURANCE_ENABLED = os.getenv("QUALITY_ASSURANCE_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+QA_MAX_RETRIES = int(os.getenv("QA_MAX_RETRIES", "2"))
+QA_SCORE_THRESHOLD = float(os.getenv("QA_SCORE_THRESHOLD", "0.75"))
+QA_APPROVE_THRESHOLD = float(os.getenv("QA_APPROVE_THRESHOLD", "0.85"))
+
+# Reflection (self-critique) — primary critic layer; uses QA validators underneath
+REFLECTION_ENABLED = os.getenv("REFLECTION_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+REFLECTION_USE_LLM = os.getenv("REFLECTION_USE_LLM", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+REFLECTION_MAX_RETRIES = int(os.getenv("REFLECTION_MAX_RETRIES", str(QA_MAX_RETRIES)))
+
+# Tool orchestration
+TOOL_ORCHESTRATOR_ENABLED = os.getenv("TOOL_ORCHESTRATOR_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+TOOL_ORCHESTRATOR_PARALLEL = os.getenv("TOOL_ORCHESTRATOR_PARALLEL", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+TOOL_ORCHESTRATOR_MAX_WORKERS = int(os.getenv("TOOL_ORCHESTRATOR_MAX_WORKERS", "4"))
 
 # ---------------------------------------------------------------------------
 # File uploads

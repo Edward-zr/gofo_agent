@@ -5,10 +5,22 @@ from __future__ import annotations
 from time import perf_counter
 from typing import Any
 
+import config
 from core.error_handler import handle_error
-from core.intent_router import IntentRouter
+from core.intent_classifier import IntentClassifier, IntentClassification, IntentType
+from core.intent_router import IntentRouter, RouteIntent
 from core.logger import get_logger
 from core.models import QueryResponse
+from core.plan_executor import PlanExecutor
+from core.planner import Planner
+from core.quality_assurance import (
+    DecisionEngine,
+    QAAction,
+    QualityAssurancePipeline,
+    QualityReport,
+    build_answer_context_from_response,
+)
+from core.reflection import ReflectionAgent, ReflectionResult
 from core.route_dispatcher import DispatchContext, RouteDispatcher
 from tools.context import build_context
 from tools.conversation import ConversationResolver
@@ -21,7 +33,7 @@ from tools.memory import (
     resolve,
 )
 from tools.orchestration import analyze_request
-from tools.planner.intent_classifier import classify_intent
+from tools.planner.intent_classifier import classify_intent as classify_business_intent
 
 logger = get_logger("agent")
 
@@ -37,6 +49,22 @@ class GOFOAgent:
         self.attachment_service = AttachmentService()
         self.intent_router = IntentRouter()
         self.route_dispatcher = RouteDispatcher()
+        self.intent_classifier = IntentClassifier()
+        self.planner = Planner()
+        self.plan_executor = PlanExecutor()
+        self.quality_assurance = QualityAssurancePipeline(
+            decision_engine=DecisionEngine(
+                score_threshold=config.QA_SCORE_THRESHOLD,
+                approve_threshold=config.QA_APPROVE_THRESHOLD,
+                max_retries=config.QA_MAX_RETRIES,
+            )
+        )
+        self.reflection_agent = ReflectionAgent(
+            qa_pipeline=self.quality_assurance,
+            use_llm=config.REFLECTION_USE_LLM,
+            max_retries=config.REFLECTION_MAX_RETRIES,
+            approve_confidence=config.QA_APPROVE_THRESHOLD,
+        )
 
     def ask(self, question: str, attachment_ids: list[str] | None = None) -> dict[str, Any]:
         """Ask GOFO a question and return a dashboard-friendly response."""
@@ -54,12 +82,25 @@ class GOFOAgent:
 
             previous_state = self.state.snapshot()
             previous_semantic_state = self.conversation.snapshot()
+
+            # Stage 1: Intent classification (primary "what" decision).
+            classification: IntentClassification | None = None
+            if config.INTENT_CLASSIFIER_ENABLED:
+                classification = self.intent_classifier.classify(question, self.memory)
+
+            # Attachment activate/detach + wait-for-upload remain router-owned.
             route_decision = self.intent_router.route(
                 question,
                 previous_state,
                 new_attachment_ids=attachment_ids or None,
                 has_stored_attachments=bool(self.attachment_memory.processed_contexts),
             )
+            if classification is not None:
+                classification = _align_classification_with_route(
+                    classification,
+                    route_decision,
+                    has_new_upload=bool(attachment_ids),
+                )
 
             if route_decision["detach_attachments"]:
                 self.attachment_memory.deactivate()
@@ -81,7 +122,7 @@ class GOFOAgent:
                 repair_detected=conversation_resolution.repair_detected,
                 has_attachments=route_decision["use_attachments"] and bool(attachment_contexts),
             )
-            intent = classify_intent(
+            intent = classify_business_intent(
                 question,
                 resolved_question=conversation_resolution.resolved_question,
                 conversation_state=previous_semantic_state,
@@ -118,33 +159,144 @@ class GOFOAgent:
                 or references_previous_result(question)
                 or references_previous_result(resolved_question)
                 or route_decision["followup"]
+                or (classification is not None and classification.requires_memory)
             ):
                 result_context = self.memory.get_current_state().get("last_result_context")
 
             cached = self.conversation.cached_response(conversation_resolution)
             sql_cache_hit = cached is not None
             last_analysis = self.attachment_memory.last_analysis or {}
-            response = self.route_dispatcher.dispatch(
-                DispatchContext(
+
+            # Multi-step planner execution for analytical / dashboard / SOP-compare.
+            # Attachments, wait-for-upload, and cache hits stay on RouteDispatcher.
+            planner_intents = {
+                IntentType.SQL_Analysis,
+                IntentType.Dashboard,
+                IntentType.SOP_Compare,
+            }
+            use_planner_pipeline = (
+                config.PLANNER_ENABLED
+                and config.INTENT_CLASSIFIER_ENABLED
+                and classification is not None
+                and classification.intent in planner_intents
+                and route_decision["intent"]
+                not in {
+                    RouteIntent.WAIT_FOR_UPLOAD,
+                    RouteIntent.ATTACHMENT_ANALYSIS,
+                    RouteIntent.ATTACHMENT_VISUALIZATION,
+                }
+                and cached is None
+            )
+
+            if use_planner_pipeline:
+                plan = self.planner.plan(
+                    resolved_question,
+                    classification,
+                    self.memory,
+                    attachment_context={
+                        "attachment_ids": attachment_ids,
+                        "filenames": [ctx.filename for ctx in attachment_contexts],
+                        "use_attachments": route_decision["use_attachments"],
+                    },
+                )
+                execution = self.plan_executor.execute(
+                    plan,
                     question=question,
                     resolved_question=resolved_question,
-                    route=route_decision,
+                    conversation_memory=self.memory,
                     attachment_contexts=attachment_contexts,
                     file_context=file_context,
                     attachment_ids=attachment_ids,
-                    intent=intent,
-                    conversation_state=previous_semantic_state,
-                    semantic=semantic,
-                    result_context=result_context,
-                    cached_response=cached,
                     stored_attachments=self.attachment_memory.get_active_stored()
                     or list(self.attachment_memory.stored_attachments.values()),
                     previous_filter=self.attachment_memory.active_filters or None,
                     last_entity=(last_analysis.get("last_entity") or None),
+                    result_context=result_context,
                 )
-            )
-            if response is None:
-                raise RuntimeError("Route dispatcher returned no response.")
+                response = execution.response
+                response.intent_classification = classification.model_dump()
+                response.execution_plan = plan.model_dump()
+                response.step_results_summary = execution.response.step_results_summary
+                if response.capability == "sql" and response.sql_rows:
+                    from tools.analyzer.business_reasoner import analyze_business_response
+
+                    response = analyze_business_response(response, resolved_question)
+                    response.intent_classification = classification.model_dump()
+                    response.execution_plan = plan.model_dump()
+            else:
+                response = self.route_dispatcher.dispatch(
+                    DispatchContext(
+                        question=question,
+                        resolved_question=resolved_question,
+                        route=route_decision,
+                        attachment_contexts=attachment_contexts,
+                        file_context=file_context,
+                        attachment_ids=attachment_ids,
+                        intent=intent,
+                        conversation_state=previous_semantic_state,
+                        semantic=semantic,
+                        result_context=result_context,
+                        cached_response=cached,
+                        stored_attachments=self.attachment_memory.get_active_stored()
+                        or list(self.attachment_memory.stored_attachments.values()),
+                        previous_filter=self.attachment_memory.active_filters or None,
+                        last_entity=(last_analysis.get("last_entity") or None),
+                    )
+                )
+                if response is None:
+                    raise RuntimeError("Route dispatcher returned no response.")
+                if classification is not None:
+                    response.intent_classification = classification.model_dump()
+
+            quality_report: QualityReport | None = None
+            reflection_result: ReflectionResult | None = None
+            qa_retry_count = 0
+            reflection_retry_count = 0
+
+            # Reflection is the primary critic. It uses QA validators underneath and
+            # sends structured feedback to the Planner (never executes tools itself).
+            if config.REFLECTION_ENABLED and _should_run_qa(response, route_decision):
+                reflection_result, response, reflection_retry_count = self._run_reflection(
+                    question=question,
+                    resolved_question=resolved_question,
+                    response=response,
+                    classification=classification,
+                    attachment_contexts=attachment_contexts,
+                    file_context=file_context,
+                    attachment_ids=attachment_ids,
+                    result_context=result_context,
+                    last_analysis=last_analysis,
+                )
+                response.reflection_result = reflection_result.model_dump()
+                response.reflection_retry_count = reflection_retry_count
+                if reflection_result.quality_report:
+                    response.quality_report = reflection_result.quality_report
+                    response.qa_retry_count = reflection_retry_count
+                if reflection_result.should_ask_user:
+                    response.answer = (
+                        reflection_result.clarification_question
+                        or _qa_clarification_message_from_reflection(reflection_result)
+                    )
+                    response.capability = "clarification"
+            elif config.QUALITY_ASSURANCE_ENABLED and _should_run_qa(response, route_decision):
+                quality_report, response, qa_retry_count = self._run_quality_assurance(
+                    question=question,
+                    resolved_question=resolved_question,
+                    response=response,
+                    classification=classification,
+                    attachment_contexts=attachment_contexts,
+                    file_context=file_context,
+                    attachment_ids=attachment_ids,
+                    result_context=result_context,
+                    last_analysis=last_analysis,
+                    route_decision=route_decision,
+                )
+                if quality_report is not None:
+                    response.quality_report = quality_report.model_dump()
+                    response.qa_retry_count = qa_retry_count
+                    if quality_report.should_ask_user and quality_report.action.value == "ask_user":
+                        response.answer = _qa_clarification_message(quality_report)
+                        response.capability = "clarification"
 
             logger.info("Selected capability: %s", response.capability)
             if response.generated_sql:
@@ -166,7 +318,11 @@ class GOFOAgent:
                 original_question=question,
                 resolved_question=resolved_question,
                 response=response,
-                intent=intent.value,
+                intent=(
+                    classification.intent.value
+                    if classification is not None
+                    else intent.value
+                ),
                 inherited_context=context.inherited_context,
                 cache_key=context.cache_key,
             )
@@ -178,6 +334,8 @@ class GOFOAgent:
             response.repair_detected = conversation_resolution.repair_detected
             response.repair_type = conversation_resolution.repair_type
             response.changed_dimension = conversation_resolution.changed_dimension
+            # Keep business Intent (ROOT_CAUSE, etc.) on classifier_intent for compatibility.
+            # The new IntentType taxonomy lives in intent_classification.
             response.classifier_intent = intent.value
             response.inherited_context = context.inherited_context
             response.semantic_domain = semantic.domain
@@ -206,6 +364,8 @@ class GOFOAgent:
                     "last_entity": analysis_summary.get("last_entity")
                     or last_analysis.get("last_entity"),
                     "charts": response.charts or [],
+                    "intent_classification": response.intent_classification,
+                    "execution_plan": response.execution_plan,
                 }
             )
             response.memory_history_count = len(self.memory.get_recent_history())
@@ -216,6 +376,14 @@ class GOFOAgent:
             response.memory_current_state["previous_semantic_conversation"] = previous_semantic_state
             response.memory_current_state["attachment_memory"] = self.attachment_memory.snapshot()
             response.memory_current_state["route_decision"] = route_decision
+            if classification is not None:
+                response.memory_current_state["intent_classification"] = classification.model_dump()
+            if response.execution_plan:
+                response.memory_current_state["execution_plan"] = response.execution_plan
+            if response.quality_report:
+                response.memory_current_state["quality_report"] = response.quality_report
+            if response.reflection_result:
+                response.memory_current_state["reflection_result"] = response.reflection_result
             response.last_result_context = self.memory.get_current_state().get("last_result_context")
             return format_agent_response(response)
         except Exception as exc:
@@ -224,6 +392,238 @@ class GOFOAgent:
         finally:
             elapsed_ms = int((perf_counter() - started) * 1000)
             logger.info("Execution time: %sms", elapsed_ms)
+
+    def _run_reflection(
+        self,
+        *,
+        question: str,
+        resolved_question: str,
+        response: QueryResponse,
+        classification: IntentClassification | None,
+        attachment_contexts: list[Any],
+        file_context: dict[str, Any],
+        attachment_ids: list[str],
+        result_context: dict[str, Any] | None,
+        last_analysis: dict[str, Any],
+    ) -> tuple[ReflectionResult, QueryResponse, int]:
+        """Critique the answer and optionally retry via Planner (max REFLECTION_MAX_RETRIES)."""
+        retry_count = 0
+        current = response
+        previous_answer = current.answer
+        reflection = self.reflection_agent.critique_response(
+            resolved_question or question,
+            current,
+            conversation_memory=self.memory,
+            ambiguous=_looks_ambiguous(resolved_question or question, classification),
+            retry_count=retry_count,
+            previous_answer=None,
+        )
+
+        while (
+            not reflection.approved
+            and not reflection.should_ask_user
+            and retry_count < config.REFLECTION_MAX_RETRIES
+            and reflection.needs_retry()
+        ):
+            retry_count += 1
+            logger.info(
+                "Reflection retry %s/%s tools=%s missing=%s",
+                retry_count,
+                config.REFLECTION_MAX_RETRIES,
+                reflection.suggested_tool_calls,
+                reflection.missing_information,
+            )
+            if classification is None:
+                break
+
+            retry_plan = self.planner.plan_retry(
+                resolved_question or question,
+                classification,
+                reflection,
+                previous_plan=current.execution_plan,
+                previous_answer=previous_answer,
+                conversation_memory=self.memory,
+            )
+            if config.DEBUG:
+                logger.info("Planner decision after reflection: %s", retry_plan.goal)
+
+            if retry_plan.requires_clarification:
+                reflection = reflection.model_copy(
+                    update={
+                        "should_ask_user": True,
+                        "approved": False,
+                        "clarification_question": retry_plan.clarification_question
+                        or reflection.clarification_question
+                        or _default_reflection_clarification(reflection),
+                    }
+                )
+                break
+
+            execution = self.plan_executor.execute(
+                retry_plan,
+                question=question,
+                resolved_question=resolved_question,
+                conversation_memory=self.memory,
+                attachment_contexts=attachment_contexts,
+                file_context=file_context,
+                attachment_ids=attachment_ids,
+                stored_attachments=self.attachment_memory.get_active_stored()
+                or list(self.attachment_memory.stored_attachments.values()),
+                previous_filter=self.attachment_memory.active_filters or None,
+                last_entity=(last_analysis.get("last_entity") or None),
+                result_context=result_context,
+            )
+            current = execution.response
+            current.intent_classification = classification.model_dump()
+            current.execution_plan = retry_plan.model_dump()
+            current.step_results_summary = execution.response.step_results_summary
+            if current.capability == "sql" and current.sql_rows:
+                from tools.analyzer.business_reasoner import analyze_business_response
+
+                current = analyze_business_response(current, resolved_question)
+                current.intent_classification = classification.model_dump()
+                current.execution_plan = retry_plan.model_dump()
+
+            current.plan_reason = (
+                f"Reflection retry {retry_count}: "
+                f"{', '.join(reflection.feedback[:2]) or 'improve evidence'}"
+            )
+            previous_answer = previous_answer or response.answer
+            reflection = self.reflection_agent.critique_response(
+                resolved_question or question,
+                current,
+                conversation_memory=self.memory,
+                ambiguous=False,
+                retry_count=retry_count,
+                previous_answer=previous_answer,
+            )
+
+        if config.DEBUG:
+            logger.info(
+                "Reflection final approved=%s confidence=%s retries=%s",
+                reflection.approved,
+                reflection.confidence,
+                retry_count,
+            )
+        return reflection, current, retry_count
+
+    def _run_quality_assurance(
+        self,
+        *,
+        question: str,
+        resolved_question: str,
+        response: QueryResponse,
+        classification: IntentClassification | None,
+        attachment_contexts: list[Any],
+        file_context: dict[str, Any],
+        attachment_ids: list[str],
+        result_context: dict[str, Any] | None,
+        last_analysis: dict[str, Any],
+        route_decision: dict[str, Any],
+    ) -> tuple[QualityReport, QueryResponse, int]:
+        """Evaluate the answer and optionally retry via Planner (max QA_MAX_RETRIES)."""
+        del route_decision  # reserved for future route-aware QA policies
+        retry_count = 0
+        current = response
+        report = self.quality_assurance.evaluate(
+            build_answer_context_from_response(
+                question=resolved_question or question,
+                response=current,
+                conversation_memory=self.memory,
+                ambiguous=_looks_ambiguous(resolved_question or question, classification),
+            ),
+            retry_count=retry_count,
+        )
+
+        while (
+            not report.approved
+            and not report.should_ask_user
+            and retry_count < config.QA_MAX_RETRIES
+            and report.action
+            in {
+                QAAction.RETRY_RETRIEVAL,
+                QAAction.RETRY_SQL,
+                QAAction.RETRY_PYTHON,
+                QAAction.RETRY_PLAN,
+            }
+        ):
+            retry_count += 1
+            logger.info(
+                "QA retry %s/%s action=%s reason=%s",
+                retry_count,
+                config.QA_MAX_RETRIES,
+                report.action.value,
+                report.retry_reason,
+            )
+            if classification is None:
+                break
+
+            retry_plan = self.planner.plan_retry(
+                resolved_question or question,
+                classification,
+                report,
+                previous_plan=current.execution_plan,
+                previous_answer=current.answer,
+                conversation_memory=self.memory,
+            )
+            if retry_plan.requires_clarification:
+                report = report.model_copy(
+                    update={
+                        "should_ask_user": True,
+                        "approved": False,
+                        "action": QAAction.ASK_USER,
+                        "retry_reason": report.retry_reason or "Clarification required after QA",
+                    }
+                )
+                break
+
+            execution = self.plan_executor.execute(
+                retry_plan,
+                question=question,
+                resolved_question=resolved_question,
+                conversation_memory=self.memory,
+                attachment_contexts=attachment_contexts,
+                file_context=file_context,
+                attachment_ids=attachment_ids,
+                stored_attachments=self.attachment_memory.get_active_stored()
+                or list(self.attachment_memory.stored_attachments.values()),
+                previous_filter=self.attachment_memory.active_filters or None,
+                last_entity=(last_analysis.get("last_entity") or None),
+                result_context=result_context,
+            )
+            current = execution.response
+            current.intent_classification = classification.model_dump()
+            current.execution_plan = retry_plan.model_dump()
+            current.step_results_summary = execution.response.step_results_summary
+            if current.capability == "sql" and current.sql_rows:
+                from tools.analyzer.business_reasoner import analyze_business_response
+
+                current = analyze_business_response(current, resolved_question)
+                current.intent_classification = classification.model_dump()
+                current.execution_plan = retry_plan.model_dump()
+
+            # Preserve prior answer + QA feedback for iterative improvement traces.
+            current.plan_reason = (
+                f"QA retry {retry_count}: {report.retry_reason or report.action.value}"
+            )
+            report = self.quality_assurance.evaluate(
+                build_answer_context_from_response(
+                    question=resolved_question or question,
+                    response=current,
+                    conversation_memory=self.memory,
+                    ambiguous=False,
+                ),
+                retry_count=retry_count,
+            )
+
+        if config.DEBUG:
+            logger.info(
+                "QA final decision approved=%s action=%s retries=%s",
+                report.approved,
+                report.action.value,
+                retry_count,
+            )
+        return report, current, retry_count
 
 
 def format_agent_response(response: QueryResponse) -> dict[str, Any]:
@@ -246,6 +646,10 @@ def format_agent_response(response: QueryResponse) -> dict[str, Any]:
             "date_range": response.date_range,
             "filters": response.analysis_filters or {},
             "intent": response.classifier_intent or response.planning_intent,
+            "primary_intent": (response.intent_classification or {}).get("intent"),
+            "intent_classification": response.intent_classification or {},
+            "execution_plan": response.execution_plan or {},
+            "step_results_summary": response.step_results_summary or [],
             "inherited_context": response.inherited_context or {},
             "business_findings": response.business_findings or [],
             "memory_updated": bool(response.memory_updated),
@@ -276,6 +680,11 @@ def format_agent_response(response: QueryResponse) -> dict[str, Any]:
             "attachment_active": route_decision.get("attachment_active"),
             "chart_type": route_decision.get("chart_type"),
             "charts": response.charts or [],
+            "quality_report": response.quality_report or {},
+            "qa_retry_count": response.qa_retry_count or 0,
+            "reflection_result": response.reflection_result or {},
+            "reflection_retry_count": response.reflection_retry_count or 0,
+            "agent_state": response.agent_state or {},
         },
         "charts": response.charts or [],
         "recommendations": _merge_recommendations(response),
@@ -334,6 +743,118 @@ def _routing_intent_hint(route_decision: dict[str, Any], question: str) -> str |
     if any(phrase in normalized for phrase in ("what should operations do", "recommend")):
         return "FILE_RECOMMENDATION"
     return "FILE_ANALYSIS"
+
+
+def _should_run_qa(response: QueryResponse, route_decision: dict[str, Any]) -> bool:
+    """Skip QA for pure chat / wait-for-upload / empty clarification shortcuts."""
+    intent = route_decision.get("intent")
+    if intent in {RouteIntent.WAIT_FOR_UPLOAD, RouteIntent.GENERAL_CHAT}:
+        return False
+    if (response.capability or "") in {"clarification", "conversation"}:
+        return False
+    if not (response.answer or "").strip() and not response.sql_rows and not response.sources:
+        return False
+    return True
+
+
+def _looks_ambiguous(question: str, classification: IntentClassification | None) -> bool:
+    if classification is not None and classification.requires_clarification:
+        return True
+    normalized = (question or "").lower().strip()
+    if not normalized:
+        return True
+    vague = {
+        "help",
+        "analyze this",
+        "look into it",
+        "check performance",
+        "what happened",
+        "status",
+    }
+    return normalized in vague
+
+
+def _qa_clarification_message(report: QualityReport) -> str:
+    missing = report.missing_information or []
+    missing_block = ""
+    if missing:
+        missing_block = "\n\nMissing details:\n" + "\n".join(f"• {item}" for item in missing[:6])
+    return (
+        "I need a bit more detail before I can provide a high-confidence answer.\n\n"
+        "Do you want:\n"
+        "• today's data\n"
+        "• this week's data\n"
+        "• all historical data?"
+        f"{missing_block}"
+    )
+
+
+def _qa_clarification_message_from_reflection(result: ReflectionResult) -> str:
+    return result.clarification_question or _default_reflection_clarification(result)
+
+
+def _default_reflection_clarification(result: ReflectionResult) -> str:
+    missing = result.missing_information or []
+    missing_block = ""
+    if missing:
+        missing_block = "\n\nI still need:\n" + "\n".join(f"• {item}" for item in missing[:6])
+    return (
+        "Which date range would you like to compare?\n\n"
+        "For example:\n"
+        "• today vs yesterday\n"
+        "• this week vs last week\n"
+        "• this month vs last month"
+        f"{missing_block}"
+    )
+
+
+def _align_classification_with_route(
+    classification: IntentClassification,
+    route_decision: dict[str, Any],
+    *,
+    has_new_upload: bool,
+) -> IntentClassification:
+    """Keep attachment-session semantics when the router activates attachments."""
+    route_intent = route_decision.get("intent")
+    if route_intent == RouteIntent.WAIT_FOR_UPLOAD:
+        return classification.model_copy(
+            update={
+                "intent": IntentType.Upload_File,
+                "requires_planner": True,
+                "requires_memory": True,
+                "requires_clarification": False,
+                "reasoning": (classification.reasoning or "") + " | aligned to WAIT_FOR_UPLOAD route",
+            }
+        )
+    if route_intent in {RouteIntent.ATTACHMENT_ANALYSIS, RouteIntent.ATTACHMENT_VISUALIZATION} or (
+        has_new_upload and route_decision.get("use_attachments")
+    ):
+        if classification.intent in {
+            IntentType.Greeting,
+            IntentType.ChitChat,
+            IntentType.SQL_Query,
+            IntentType.SQL_Analysis,
+            IntentType.SOP_QA,
+            IntentType.SOP_Summary,
+            IntentType.SOP_Compare,
+            IntentType.General_Knowledge,
+            IntentType.Coding,
+        }:
+            # Respect explicit SQL/SOP/chat detach decisions from the router.
+            if route_decision.get("detach_attachments"):
+                return classification
+        if classification.intent not in {IntentType.Upload_File, IntentType.Dashboard, IntentType.Follow_Up}:
+            return classification.model_copy(
+                update={
+                    "intent": IntentType.Upload_File,
+                    "requires_planner": True,
+                    "requires_memory": True,
+                    "requires_sql": False,
+                    "requires_rag": False,
+                    "reasoning": (classification.reasoning or "") + " | aligned to attachment route",
+                }
+            )
+    return classification
 
 
 def _compact_file_context(file_context: dict[str, Any]) -> dict[str, Any]:
