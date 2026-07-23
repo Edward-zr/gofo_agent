@@ -1,0 +1,472 @@
+[
+  {
+    "id": "memory_001",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_002",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_003",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_004",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_005",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_006",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_007",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_008",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_009",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_010",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_011",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_012",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_013",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_014",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_015",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_016",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_017",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_018",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_019",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_020",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_021",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_022",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_023",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_024",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_025",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_026",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_027",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  },
+  {
+    "id": "memory_028",
+    "question": "What region are we focused on?",
+    "expected_behavior": "memory_recall_region",
+    "expected_tools": [
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago"
+    ],
+    "notes": "Setup turn: Remember we are analyzing Chicago hubs.",
+    "setup_question": "Remember we are analyzing Chicago hubs."
+  },
+  {
+    "id": "memory_029",
+    "question": "Rank drivers with the current metric.",
+    "expected_behavior": "memory_metric_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate",
+      "driver"
+    ],
+    "notes": "Setup turn: Use pickup rate as the metric.",
+    "setup_question": "Use pickup rate as the metric."
+  },
+  {
+    "id": "memory_030",
+    "question": "Show hub performance for the current date range.",
+    "expected_behavior": "memory_date_carry",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "week",
+      "hub"
+    ],
+    "notes": "Setup turn: Focus on this week.",
+    "setup_question": "Focus on this week."
+  }
+]

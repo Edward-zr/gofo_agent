@@ -1,0 +1,2114 @@
+[
+  {
+    "scenario_id": "scenario_pickup_chicago_decline_chart",
+    "description": "Pickup performance drill-down with compare, explain, chart, recommend.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only Chicago.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chicago"
+        ]
+      },
+      {
+        "user": "Compare with yesterday.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "yesterday",
+          "compare"
+        ]
+      },
+      {
+        "user": "Explain the biggest decline.",
+        "expected_behavior": "follow_up_explain",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "decline"
+        ]
+      },
+      {
+        "user": "Generate a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "SQL",
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      },
+      {
+        "user": "Recommend operational improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "SQL",
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_hub_chicago_weekly",
+    "description": "Weekly hub review for Chicago.",
+    "conversation": [
+      {
+        "user": "Show this week's pickup rate for Chicago.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Compare with last week.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "week"
+        ]
+      },
+      {
+        "user": "Which drivers are underperforming?",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Recommend actions.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_hub_los_angeles_weekly",
+    "description": "Weekly hub review for Los Angeles.",
+    "conversation": [
+      {
+        "user": "Show this week's pickup rate for Los Angeles.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Compare with last week.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "week"
+        ]
+      },
+      {
+        "user": "Which drivers are underperforming?",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Recommend actions.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_hub_atlanta_weekly",
+    "description": "Weekly hub review for Atlanta.",
+    "conversation": [
+      {
+        "user": "Show this week's pickup rate for Atlanta.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Compare with last week.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "week"
+        ]
+      },
+      {
+        "user": "Which drivers are underperforming?",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Recommend actions.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_hub_dallas_weekly",
+    "description": "Weekly hub review for Dallas.",
+    "conversation": [
+      {
+        "user": "Show this week's pickup rate for Dallas.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Compare with last week.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "week"
+        ]
+      },
+      {
+        "user": "Which drivers are underperforming?",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Recommend actions.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_hub_seattle_weekly",
+    "description": "Weekly hub review for Seattle.",
+    "conversation": [
+      {
+        "user": "Show this week's pickup rate for Seattle.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Compare with last week.",
+        "expected_behavior": "follow_up_compare",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "week"
+        ]
+      },
+      {
+        "user": "Which drivers are underperforming?",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Recommend actions.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_clarification_best_driver",
+    "description": "Ambiguous ranking triggers clarification then resumes.",
+    "conversation": [
+      {
+        "user": "Show the best driver.",
+        "expected_behavior": "clarification_metric",
+        "expected_tools": [],
+        "expected_answer_keywords": [
+          "metric"
+        ]
+      },
+      {
+        "user": "2",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ],
+        "notes": "Clarification option for Pickup rate"
+      }
+    ],
+    "expected_behaviors": [
+      "clarification",
+      "sql_analytics"
+    ],
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_sop_returns_then_summary",
+    "description": "SOP Q&A followed by summary request.",
+    "conversation": [
+      {
+        "user": "What is the SOP for customer returns?",
+        "expected_behavior": "rag_sop_answer",
+        "expected_tools": [
+          "RAG",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "return"
+        ]
+      },
+      {
+        "user": "Summarize the key points.",
+        "expected_behavior": "rag_sop_answer",
+        "expected_tools": [
+          "RAG",
+          "LLM",
+          "MEMORY"
+        ],
+        "expected_answer_keywords": [
+          "return"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "rag_sop_answer",
+      "memory"
+    ],
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_upload_wait_then_analyze",
+    "description": "User asks to analyze a file without uploading first.",
+    "conversation": [
+      {
+        "user": "Analyze my pickup Excel file.",
+        "expected_behavior": "upload_or_attachment_handling",
+        "expected_tools": [
+          "ATTACHMENT",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "upload",
+          "file"
+        ]
+      },
+      {
+        "user": "What columns should the file include?",
+        "expected_behavior": "general_knowledge",
+        "expected_tools": [
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "column",
+          "driver"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "upload_or_attachment_handling"
+    ],
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_0_0",
+    "description": "Multi-turn pickup rate investigation for Chicago.",
+    "conversation": [
+      {
+        "user": "Show pickup rate today for Chicago.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_0_1",
+    "description": "Multi-turn pickup rate investigation for Los Angeles.",
+    "conversation": [
+      {
+        "user": "Show pickup rate today for Los Angeles.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_0_2",
+    "description": "Multi-turn pickup rate investigation for Atlanta.",
+    "conversation": [
+      {
+        "user": "Show pickup rate today for Atlanta.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_1_0",
+    "description": "Multi-turn completed pickups investigation for Chicago.",
+    "conversation": [
+      {
+        "user": "Show completed pickups today for Chicago.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "completed",
+          "pickups"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_1_1",
+    "description": "Multi-turn completed pickups investigation for Los Angeles.",
+    "conversation": [
+      {
+        "user": "Show completed pickups today for Los Angeles.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "completed",
+          "pickups"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_1_2",
+    "description": "Multi-turn completed pickups investigation for Atlanta.",
+    "conversation": [
+      {
+        "user": "Show completed pickups today for Atlanta.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "completed",
+          "pickups"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_2_0",
+    "description": "Multi-turn failure rate investigation for Chicago.",
+    "conversation": [
+      {
+        "user": "Show failure rate today for Chicago.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "failure",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_2_1",
+    "description": "Multi-turn failure rate investigation for Los Angeles.",
+    "conversation": [
+      {
+        "user": "Show failure rate today for Los Angeles.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "failure",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_2_2",
+    "description": "Multi-turn failure rate investigation for Atlanta.",
+    "conversation": [
+      {
+        "user": "Show failure rate today for Atlanta.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "failure",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_3_0",
+    "description": "Multi-turn on-time rate investigation for Chicago.",
+    "conversation": [
+      {
+        "user": "Show on-time rate today for Chicago.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "on-time",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_3_1",
+    "description": "Multi-turn on-time rate investigation for Los Angeles.",
+    "conversation": [
+      {
+        "user": "Show on-time rate today for Los Angeles.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "on-time",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_metric_3_2",
+    "description": "Multi-turn on-time rate investigation for Atlanta.",
+    "conversation": [
+      {
+        "user": "Show on-time rate today for Atlanta.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "on-time",
+          "rate"
+        ]
+      },
+      {
+        "user": "Break it down by driver.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "driver"
+        ]
+      },
+      {
+        "user": "Plot a bar chart.",
+        "expected_behavior": "visualization",
+        "expected_tools": [
+          "VISUALIZATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "chart"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "visualization"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "VISUALIZATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_22",
+    "description": "Synthetic ops workflow #22.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_23",
+    "description": "Synthetic ops workflow #23.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_24",
+    "description": "Synthetic ops workflow #24.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_25",
+    "description": "Synthetic ops workflow #25.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_26",
+    "description": "Synthetic ops workflow #26.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_27",
+    "description": "Synthetic ops workflow #27.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_28",
+    "description": "Synthetic ops workflow #28.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_29",
+    "description": "Synthetic ops workflow #29.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_30",
+    "description": "Synthetic ops workflow #30.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_31",
+    "description": "Synthetic ops workflow #31.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_32",
+    "description": "Synthetic ops workflow #32.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_33",
+    "description": "Synthetic ops workflow #33.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_34",
+    "description": "Synthetic ops workflow #34.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_35",
+    "description": "Synthetic ops workflow #35.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_36",
+    "description": "Synthetic ops workflow #36.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_37",
+    "description": "Synthetic ops workflow #37.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_38",
+    "description": "Synthetic ops workflow #38.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_39",
+    "description": "Synthetic ops workflow #39.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  },
+  {
+    "scenario_id": "scenario_synthetic_40",
+    "description": "Synthetic ops workflow #40.",
+    "conversation": [
+      {
+        "user": "Show today's pickup performance.",
+        "expected_behavior": "sql_analytics",
+        "expected_tools": [
+          "SQL",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "pickup"
+        ]
+      },
+      {
+        "user": "Show only the worst hub.",
+        "expected_behavior": "follow_up_filter",
+        "expected_tools": [
+          "SQL",
+          "MEMORY",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "hub"
+        ]
+      },
+      {
+        "user": "Recommend improvements.",
+        "expected_behavior": "recommendation",
+        "expected_tools": [
+          "RECOMMENDATION",
+          "LLM"
+        ],
+        "expected_answer_keywords": [
+          "recommend"
+        ]
+      }
+    ],
+    "expected_behaviors": [
+      "sql_analytics",
+      "memory",
+      "recommendation"
+    ],
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "RECOMMENDATION",
+      "LLM"
+    ]
+  }
+]

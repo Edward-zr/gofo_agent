@@ -56,6 +56,25 @@ def disable_reflection_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def disable_clarification_manager_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable Clarification Manager in agent integration tests by default.
+
+    Unit tests cover ClarificationManager directly and re-enable via monkeypatch.
+    """
+    monkeypatch.setattr("config.CLARIFICATION_MANAGER_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def disable_multi_agent_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep ToolOrchestrator as PlanExecutor backend in most tests.
+
+    Multi-agent Supervisor is covered in tests/test_multi_agent.py — opt in with
+    monkeypatch.setattr(config, "MULTI_AGENT_ENABLED", True).
+    """
+    monkeypatch.setattr("config.MULTI_AGENT_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
 def mock_semantic_orchestration(monkeypatch: pytest.MonkeyPatch) -> None:
     """Provide deterministic semantic analysis during agent and router tests."""
 

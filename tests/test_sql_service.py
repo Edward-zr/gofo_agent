@@ -41,13 +41,17 @@ def test_answer_runs_date_resolver_planner_executor_and_summarizer(
         "Top customers this month",
         date(2026, 6, 28),
     )
-    mock_plan.assert_called_once_with("Top customers in June 2026")
+    mock_plan.assert_called_once()
+    assert mock_plan.call_args.args[0] == "Top customers in June 2026"
+    assert mock_plan.call_args.kwargs.get("retrieved_schema") is not None
     mock_execute.assert_called_once_with(mock_plan.return_value)
     mock_summarize.assert_called_once_with(
         "Top customers this month",
         mock_plan.return_value,
         mock_execute.return_value,
     )
+    assert response.retrieved_schema is not None
+    assert response.candidate_tables is not None
 
 
 def test_answer_empty_question_raises() -> None:

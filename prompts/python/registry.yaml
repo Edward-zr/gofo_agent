@@ -1,0 +1,7 @@
+family: python
+prompts:
+  analysis_prompt:
+    active: v1
+    versions:
+      v1:
+        file: analysis_prompt_v1.md

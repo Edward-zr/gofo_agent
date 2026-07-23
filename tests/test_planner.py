@@ -9,15 +9,15 @@ import pytest
 from tools.planner import plan
 
 
-def _mock_planner_response(mock_get_llm: MagicMock, content: str) -> None:
-    """Configure the mocked planner LLM response."""
-    mock_get_llm.return_value.invoke.return_value = MagicMock(content=content)
+def _mock_planner_response(mock_get_manager: MagicMock, content: str) -> None:
+    """Configure the mocked PromptManager.invoke response."""
+    mock_get_manager.return_value.invoke.return_value = content.strip()
 
 
-@patch("tools.planner.planner.get_llm")
-def test_plan_sql_question(mock_get_llm: MagicMock) -> None:
+@patch("core.prompt_manager.get_prompt_manager")
+def test_plan_sql_question(mock_get_manager: MagicMock) -> None:
     _mock_planner_response(
-        mock_get_llm,
+        mock_get_manager,
         """
         {
           "capability": "sql",
@@ -40,10 +40,10 @@ def test_plan_sql_question(mock_get_llm: MagicMock) -> None:
     assert decision.entities == {"date": "yesterday"}
 
 
-@patch("tools.planner.planner.get_llm")
-def test_plan_rag_question(mock_get_llm: MagicMock) -> None:
+@patch("core.prompt_manager.get_prompt_manager")
+def test_plan_rag_question(mock_get_manager: MagicMock) -> None:
     _mock_planner_response(
-        mock_get_llm,
+        mock_get_manager,
         """
         {
           "capability": "rag",
@@ -65,10 +65,10 @@ def test_plan_rag_question(mock_get_llm: MagicMock) -> None:
     assert decision.requires_rag is True
 
 
-@patch("tools.planner.planner.get_llm")
-def test_plan_multi_question(mock_get_llm: MagicMock) -> None:
+@patch("core.prompt_manager.get_prompt_manager")
+def test_plan_multi_question(mock_get_manager: MagicMock) -> None:
     _mock_planner_response(
-        mock_get_llm,
+        mock_get_manager,
         """
         {
           "capability": "multi",
@@ -90,10 +90,10 @@ def test_plan_multi_question(mock_get_llm: MagicMock) -> None:
     assert decision.requires_rag is True
 
 
-@patch("tools.planner.planner.get_llm")
-def test_plan_greeting_unknown(mock_get_llm: MagicMock) -> None:
+@patch("core.prompt_manager.get_prompt_manager")
+def test_plan_greeting_unknown(mock_get_manager: MagicMock) -> None:
     _mock_planner_response(
-        mock_get_llm,
+        mock_get_manager,
         """
         {
           "capability": "unknown",
@@ -115,10 +115,10 @@ def test_plan_greeting_unknown(mock_get_llm: MagicMock) -> None:
     assert decision.requires_rag is False
 
 
-@patch("tools.planner.planner.get_llm")
-def test_plan_random_text_unknown(mock_get_llm: MagicMock) -> None:
+@patch("core.prompt_manager.get_prompt_manager")
+def test_plan_random_text_unknown(mock_get_manager: MagicMock) -> None:
     _mock_planner_response(
-        mock_get_llm,
+        mock_get_manager,
         """
         {
           "capability": "unknown",

@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tools.sql.planner import plan
-from tools.sql.schema import SCHEMA
 
 SAMPLE_SQL = (
     "SELECT COUNT(*)\n"
@@ -65,9 +64,12 @@ def test_plan_includes_schema_in_prompt(mock_get_llm: MagicMock) -> None:
     messages = mock_get_llm.return_value.invoke.call_args.args[0]
     system_prompt = messages[0].content
 
-    assert "drivers" in system_prompt
+    assert "Retrieved schema" in system_prompt
+    assert "TABLE pickups:" in system_prompt
     assert "pickup_date" in system_prompt
-    assert SCHEMA.strip() in system_prompt
+    # Full static SCHEMA dump must NOT be injected by default.
+    assert "Database Engine" not in system_prompt or "Retrieved schema" in system_prompt
+    assert system_prompt.count("TABLE pickups:") >= 1
 
 
 @patch("tools.sql.planner.get_llm")
@@ -82,7 +84,7 @@ def test_plan_includes_sqlite_instructions(mock_get_llm: MagicMock) -> None:
     system_prompt = messages[0].content
 
     assert "Use SQLite syntax only." in system_prompt
-    assert "DATE('now', '-1 day')" in system_prompt
+    assert "DATE('now'" in system_prompt
     assert "Use LIMIT instead of TOP." in system_prompt
     assert "SELECT 'UNKNOWN';" in system_prompt
 
@@ -159,5 +161,5 @@ def test_plan_prompt_discourages_unknown_for_valid_analytics(mock_get_llm: Magic
     system_prompt = messages[0].content
 
     assert "Attempt a best-effort analytics query" in system_prompt
-    assert "Never return SELECT 'UNKNOWN'; for valid operational analytics" in system_prompt
-    assert "only when the question truly cannot be mapped" in system_prompt
+    assert "Return SELECT 'UNKNOWN'; only when the question truly cannot be" in system_prompt
+    assert "mapped to the retrieved schema" in system_prompt

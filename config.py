@@ -47,6 +47,32 @@ EMBED_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "100"))
 # ---------------------------------------------------------------------------
 TOP_K_DEFAULT = int(os.getenv("TOP_K_DEFAULT", "5"))
 SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.40"))
+# Kept for backward compatibility / logging; Adaptive Retrieval Confidence Engine
+# does NOT use this as a hard generation gate.
+
+# Adaptive Retrieval Confidence Engine
+RETRIEVAL_CONFIDENCE_ENABLED = os.getenv("RETRIEVAL_CONFIDENCE_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+RETRIEVAL_CONFIDENCE_DEBUG = os.getenv("RETRIEVAL_CONFIDENCE_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+RETRIEVAL_CONFIDENCE_HIGH = float(os.getenv("RETRIEVAL_CONFIDENCE_HIGH", "0.80"))
+RETRIEVAL_CONFIDENCE_MEDIUM = float(os.getenv("RETRIEVAL_CONFIDENCE_MEDIUM", "0.60"))
+# Tunable scoring weights (normalized at runtime). Override via env JSON optional later.
+RETRIEVAL_CONFIDENCE_WEIGHTS = {
+    "highest_similarity": float(os.getenv("RETRIEVAL_CONF_W_HIGHEST", "0.40")),
+    "average_similarity": float(os.getenv("RETRIEVAL_CONF_W_AVERAGE", "0.30")),
+    "chunk_count": float(os.getenv("RETRIEVAL_CONF_W_CHUNKS", "0.15")),
+    "source_diversity": float(os.getenv("RETRIEVAL_CONF_W_DIVERSITY", "0.10")),
+    "metadata_quality": float(os.getenv("RETRIEVAL_CONF_W_METADATA", "0.05")),
+}
 
 HYBRID_RETRIEVAL_ENABLED = os.getenv("HYBRID_RETRIEVAL_ENABLED", "true").lower() in {
     "1",
@@ -132,6 +158,12 @@ PLANNER_ENABLED = os.getenv("PLANNER_ENABLED", "true").lower() in {
     "yes",
     "on",
 }
+DATA_SOURCE_SELECTION_ENABLED = os.getenv("DATA_SOURCE_SELECTION_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # ---------------------------------------------------------------------------
 # Quality assurance pipeline
@@ -175,6 +207,89 @@ TOOL_ORCHESTRATOR_PARALLEL = os.getenv("TOOL_ORCHESTRATOR_PARALLEL", "true").low
     "on",
 }
 TOOL_ORCHESTRATOR_MAX_WORKERS = int(os.getenv("TOOL_ORCHESTRATOR_MAX_WORKERS", "4"))
+
+# Specialized Python analytics tools debug
+PYTHON_TOOLS_DEBUG = os.getenv("PYTHON_TOOLS_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+# Schema retrieval for SQL generation (never dump full schema by default)
+SCHEMA_RETRIEVER_ENABLED = os.getenv("SCHEMA_RETRIEVER_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+SCHEMA_RETRIEVER_DEBUG = os.getenv("SCHEMA_RETRIEVER_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+SCHEMA_EMBEDDING_RETRIEVAL_ENABLED = os.getenv(
+    "SCHEMA_EMBEDDING_RETRIEVAL_ENABLED", "false"
+).lower() in {"1", "true", "yes", "on"}
+
+# Prompt Registry (versioned prompt assets under prompts/)
+PROMPT_REGISTRY_DIR = os.getenv("PROMPT_REGISTRY_DIR", "prompts")
+PROMPT_HOT_RELOAD = os.getenv("PROMPT_HOT_RELOAD", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+PROMPT_DEBUG = os.getenv("PROMPT_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+# Comma-separated overrides: planner.planner_prompt:v2,rag.generator_prompt:v1
+PROMPT_EXPERIMENT = os.getenv("PROMPT_EXPERIMENT", "")
+
+# Multi-agent Supervisor + Agent Registry
+MULTI_AGENT_ENABLED = os.getenv("MULTI_AGENT_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+MULTI_AGENT_PARALLEL = os.getenv("MULTI_AGENT_PARALLEL", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+MULTI_AGENT_MAX_WORKERS = int(os.getenv("MULTI_AGENT_MAX_WORKERS", "4"))
+MULTI_AGENT_DEBUG = os.getenv("MULTI_AGENT_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+MULTI_AGENT_REFLECTION = os.getenv("MULTI_AGENT_REFLECTION", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+# Clarification manager (ask before tools when parameters are missing)
+CLARIFICATION_MANAGER_ENABLED = os.getenv("CLARIFICATION_MANAGER_ENABLED", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+CLARIFICATION_DEBUG = os.getenv("CLARIFICATION_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 # ---------------------------------------------------------------------------
 # File uploads

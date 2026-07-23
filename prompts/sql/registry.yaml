@@ -1,0 +1,26 @@
+family: sql
+prompts:
+  generator_prompt:
+    active: v1
+    candidates:
+    - v2
+    versions:
+      v1:
+        file: generator_prompt_v1.md
+      v2:
+        file: generator_prompt_v2.md
+  planner_prompt:
+    active: v1
+    versions:
+      v1:
+        file: planner_prompt_v1.md
+  validator_prompt:
+    active: v1
+    versions:
+      v1:
+        file: validator_prompt_v1.md
+  summarizer_prompt:
+    active: v1
+    versions:
+      v1:
+        file: summarizer_prompt_v1.md

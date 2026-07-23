@@ -19,3 +19,9 @@ chroma_db/
 data/uploads/
 data/memory.db
 
+# Evaluation run artifacts (keep datasets; ignore bulky result dumps)
+evaluation/results/*.json
+evaluation/results/report_*.md
+!evaluation/results/.gitkeep
+!evaluation/results/latest_report.md
+

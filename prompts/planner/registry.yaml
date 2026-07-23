@@ -1,0 +1,12 @@
+family: planner
+prompts:
+  planner_prompt:
+    active: v1
+    candidates:
+    - v2
+    experimental: []
+    versions:
+      v1:
+        file: planner_prompt_v1.md
+      v2:
+        file: planner_prompt_v2.md

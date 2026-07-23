@@ -1,0 +1,306 @@
+[
+  {
+    "id": "upload_001",
+    "question": "I want to analyze an Excel file of pickups.",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "file",
+      "excel"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_002",
+    "question": "Can you read my CSV attachment?",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "csv",
+      "attach"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_003",
+    "question": "Please analyze the uploaded driver report.",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "analyze",
+      "driver"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_004",
+    "question": "Chart the attached hub performance spreadsheet.",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "VISUALIZATION",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chart",
+      "attach",
+      "hub"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_005",
+    "question": "Summarize the PDF I uploaded.",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "pdf",
+      "summar"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_006",
+    "question": "I want to analyze an Excel file of pickups. (variant 6)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "file",
+      "excel"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_007",
+    "question": "Can you read my CSV attachment? (variant 7)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "csv",
+      "attach"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_008",
+    "question": "Please analyze the uploaded driver report. (variant 8)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "analyze",
+      "driver"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_009",
+    "question": "Chart the attached hub performance spreadsheet. (variant 9)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "VISUALIZATION",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chart",
+      "attach",
+      "hub"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_010",
+    "question": "Summarize the PDF I uploaded. (variant 10)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "pdf",
+      "summar"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_011",
+    "question": "I want to analyze an Excel file of pickups. (variant 11)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "file",
+      "excel"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_012",
+    "question": "Can you read my CSV attachment? (variant 12)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "csv",
+      "attach"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_013",
+    "question": "Please analyze the uploaded driver report. (variant 13)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "analyze",
+      "driver"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_014",
+    "question": "Chart the attached hub performance spreadsheet. (variant 14)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "VISUALIZATION",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chart",
+      "attach",
+      "hub"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_015",
+    "question": "Summarize the PDF I uploaded. (variant 15)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "pdf",
+      "summar"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_016",
+    "question": "I want to analyze an Excel file of pickups. (variant 16)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "file",
+      "excel"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_017",
+    "question": "Can you read my CSV attachment? (variant 17)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "csv",
+      "attach"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_018",
+    "question": "Please analyze the uploaded driver report. (variant 18)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "analyze",
+      "driver"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_019",
+    "question": "Chart the attached hub performance spreadsheet. (variant 19)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "VISUALIZATION",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chart",
+      "attach",
+      "hub"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  },
+  {
+    "id": "upload_020",
+    "question": "Summarize the PDF I uploaded. (variant 20)",
+    "expected_behavior": "upload_or_attachment_handling",
+    "expected_tools": [
+      "ATTACHMENT",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "upload",
+      "pdf",
+      "summar"
+    ],
+    "notes": "May wait for upload if no attachment_ids provided."
+  }
+]

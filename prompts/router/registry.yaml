@@ -1,0 +1,16 @@
+family: router
+prompts:
+  router_prompt:
+    active: v1
+    candidates:
+    - v2
+    versions:
+      v1:
+        file: router_prompt_v1.md
+      v2:
+        file: router_prompt_v2.md
+  intent_classifier_prompt:
+    active: v1
+    versions:
+      v1:
+        file: intent_classifier_prompt_v1.md

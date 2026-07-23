@@ -511,35 +511,20 @@ def _parse_json(content: str) -> dict[str, Any]:
     return json.loads(content)
 
 
-def _system_prompt() -> str:
+def _system_prompt(*, question: str = "", history: str = "") -> str:
+    """Render intent classifier system prompt from the Prompt Registry."""
+    from core.prompt_manager import get_prompt_manager
+
     intents = ", ".join(item.value for item in IntentType)
-    return (
-        "You are the intent classifier for a GOFO logistics operations intelligence agent.\n"
-        "Classify the user's latest message into exactly ONE primary intent.\n\n"
-        f"Allowed intents: {intents}\n\n"
-        "Rules:\n"
-        "- Use conversation history for follow-ups (e.g. 'what about Chicago?' after a SQL answer → Follow_Up).\n"
-        "- SOP/policy/procedure questions → SOP_QA / SOP_Summary / SOP_Compare.\n"
-        "- Simple operational lists/counts → SQL_Query.\n"
-        "- Analytical ops questions (why, worst, compare periods, root cause) → SQL_Analysis.\n"
-        "- Charts/dashboards/KPI plots → Dashboard.\n"
-        "- Explaining prior numbers/charts → Explain_Result.\n"
-        "- File/CSV/PDF analysis → Upload_File.\n"
-        "- Coding/debug → Coding.\n"
-        "- Greetings → Greeting; casual chat → ChitChat; general non-ops knowledge → General_Knowledge.\n"
-        "- If unsure, use Unknown with low confidence.\n\n"
-        "Return ONLY JSON with this shape:\n"
-        "{\n"
-        '  "intent": "SQL_Analysis",\n'
-        '  "confidence": 0.96,\n'
-        '  "requires_sql": true,\n'
-        '  "requires_rag": false,\n'
-        '  "requires_memory": true,\n'
-        '  "requires_planner": true,\n'
-        '  "requires_clarification": false,\n'
-        '  "reasoning": "brief debug reason"\n'
-        "}"
+    _selection, rendered = get_prompt_manager().render(
+        "router.intent_classifier_prompt",
+        {
+            "question": question or "(see user message)",
+            "allowed_intents": intents,
+            "history": history or "(none)",
+        },
     )
+    return rendered
 
 
 def _debug_print(classification: IntentClassification) -> None:
@@ -597,17 +582,24 @@ class IntentClassifier:
             return result
 
         history = _history_from_memory(conversation_memory)
-        messages = [
-            SystemMessage(content=_system_prompt()),
-            HumanMessage(
-                content=(
-                    f"Conversation history:\n{_format_history(history)}\n\n"
-                    f"Latest user message:\n{question}"
-                )
+        history_text = _format_history(history)
+        from core.prompt_manager import get_prompt_manager
+
+        manager = get_prompt_manager()
+        selection, messages = manager.build_messages(
+            "router.intent_classifier_prompt",
+            {
+                "question": question,
+                "allowed_intents": ", ".join(item.value for item in IntentType),
+                "history": history_text,
+            },
+            user_content=(
+                f"Conversation history:\n{history_text}\n\n"
+                f"Latest user message:\n{question}"
             ),
-        ]
+        )
         try:
-            llm = self._llm or get_llm()
+            llm = self._llm or manager.llm_for(selection)
             response = llm.invoke(messages)
             content = response.content if hasattr(response, "content") else response
             raw = content if isinstance(content, str) else str(content)

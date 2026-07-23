@@ -77,7 +77,12 @@ def _handle_sql(ctx: StepContext) -> dict[str, Any]:
     from tools.sql import service as sql_service
 
     question = ctx.step.inputs.get("question") or ctx.resolved_question or ctx.question
-    response = sql_service.answer(QueryRequest(question=question))
+    semantic_context = None
+    if isinstance(ctx.extras, dict):
+        semantic_context = ctx.extras.get("semantic_context")
+    response = sql_service.answer(
+        QueryRequest(question=question, semantic_context=semantic_context)
+    )
     return {
         "tool": ToolName.SQL,
         "answer": response.answer,
@@ -86,31 +91,76 @@ def _handle_sql(ctx: StepContext) -> dict[str, Any]:
         "rewritten_question": response.rewritten_question,
         "capability": "sql",
         "response": response,
+        "retrieved_schema": response.retrieved_schema,
+        "candidate_tables": response.candidate_tables or [],
+        "candidate_columns": response.candidate_columns or {},
     }
 
 
 def _handle_rag(ctx: StepContext) -> dict[str, Any]:
     from tools.rag import service as rag_service
+    from tools.rag.confidence import policy_from_mapping
 
     question = ctx.step.inputs.get("question") or ctx.resolved_question or ctx.question
+    policy = policy_from_mapping(
+        ctx.step.inputs.get("retrieval_policy")
+        or (ctx.plan.retrieval_policy if ctx.plan else None)
+    )
+    top_k = ctx.step.inputs.get("top_k")
+    request_kwargs: dict[str, Any] = {"question": question}
+    if top_k is not None:
+        try:
+            request_kwargs["top_k"] = int(top_k)
+        except (TypeError, ValueError):
+            pass
+
     # retrieve-only for intermediate steps; generate on summarize actions
     if ctx.step.action.startswith("retrieve"):
-        response = rag_service.retrieve_only(QueryRequest(question=question))
-        return {
+        response = rag_service.retrieve_only(
+            QueryRequest(**request_kwargs),
+            retrieval_policy=policy,
+        )
+        payload = {
             "tool": ToolName.RAG,
             "sources": [source.model_dump() for source in response.sources],
             "source_chunks": response.sources,
             "capability": "rag",
             "response": response,
+            "retrieval_confidence": response.retrieval_confidence,
+            "confidence_score": response.confidence_score,
+            "confidence_level": response.confidence_level,
+            "confidence_breakdown": response.confidence_breakdown,
+            "similarity_scores": response.similarity_scores,
+            "retrieved_chunk_count": response.retrieved_chunk_count,
+            "retrieved_sources": response.retrieved_sources,
+            "confidence_reason": response.confidence_reason,
+            "fallback_strategy": response.fallback_strategy,
+            "retrieval_policy": response.retrieval_policy,
         }
-    response = rag_service.answer(QueryRequest(question=question))
+        return payload
+
+    response = rag_service.answer(
+        QueryRequest(**request_kwargs),
+        retrieval_policy=policy,
+    )
     return {
         "tool": ToolName.RAG,
         "answer": response.answer,
         "sources": [source.model_dump() for source in response.sources],
         "source_chunks": response.sources,
-        "capability": "rag",
+        "capability": response.capability or "rag",
         "response": response,
+        "requires_clarification": response.requires_clarification,
+        "retrieval_confidence": response.retrieval_confidence,
+        "confidence_score": response.confidence_score,
+        "confidence_level": response.confidence_level,
+        "confidence_breakdown": response.confidence_breakdown,
+        "similarity_scores": response.similarity_scores,
+        "retrieved_chunk_count": response.retrieved_chunk_count,
+        "retrieved_sources": response.retrieved_sources,
+        "confidence_reason": response.confidence_reason,
+        "fallback_strategy": response.fallback_strategy,
+        "retrieval_policy": response.retrieval_policy,
     }
 
 
@@ -130,65 +180,114 @@ def _handle_memory(ctx: StepContext) -> dict[str, Any]:
     }
 
 
-def _handle_python(ctx: StepContext) -> dict[str, Any]:
+def _handle_knowledge_graph(ctx: StepContext) -> dict[str, Any]:
+    from tools.knowledge_graph import service as kg_service
+
+    question = ctx.step.inputs.get("question") or ctx.resolved_question or ctx.question
+    sql_rows = _rows_from_results(ctx.step_results)
+    result = kg_service.answer(question, sql_rows=sql_rows)
+    return {
+        "tool": ToolName.KNOWLEDGE_GRAPH,
+        "answer": result.get("answer"),
+        "facts": result.get("facts") or [],
+        "graph_nodes": result.get("graph_nodes") or {},
+        "capability": "knowledge_graph",
+        "response": result,
+    }
+
+
+def _frame_from_prior_steps(step_results: dict[int, dict[str, Any]]) -> pd.DataFrame:
+    """Prefer transformed frames, then any prior dataframe, then SQL rows."""
+    for result in reversed(list(step_results.values())):
+        frame = result.get("transformed_dataframe")
+        if isinstance(frame, pd.DataFrame) and not frame.empty:
+            return frame
+    return _dataframe_from_results(step_results)
+
+
+def _statistics_from_prior_steps(step_results: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    for result in reversed(list(step_results.values())):
+        stats = result.get("statistics") or result.get("summary")
+        if isinstance(stats, dict) and stats:
+            return stats
+    return {}
+
+
+def _handle_transform(ctx: StepContext) -> dict[str, Any]:
+    from tools.python.transformation_tool import run_transformation
+
     frame = _dataframe_from_results(ctx.step_results)
-    summary: dict[str, Any] = {"row_count": int(len(frame))}
-    if frame.empty:
+    question = ctx.resolved_question or ctx.question
+    result = run_transformation(frame, question=question)
+    result["tool"] = ToolName.TRANSFORM.value
+    return result
+
+
+def _handle_statistics(ctx: StepContext) -> dict[str, Any]:
+    from tools.python.statistics_tool import run_statistics
+
+    frame = _frame_from_prior_steps(ctx.step_results)
+    question = ctx.resolved_question or ctx.question
+    result = run_statistics(frame, question=question)
+    result["tool"] = ToolName.STATISTICS.value
+    return result
+
+
+def _handle_python(ctx: StepContext) -> dict[str, Any]:
+    """Backward-compatible PYTHON tool → StatisticsTool (after optional transform)."""
+    from tools.python.statistics_tool import run_statistics
+    from tools.python.transformation_tool import run_transformation
+
+    action = (ctx.step.action or "").lower()
+    frame = _dataframe_from_results(ctx.step_results)
+    question = ctx.resolved_question or ctx.question
+    if "build_dataframe" in action or "prepare" in action or "transform" in action:
+        transformed = run_transformation(frame, question=question)
+        frame = transformed.get("transformed_dataframe", frame)
+        stats = run_statistics(frame, question=question)
         return {
-            "tool": ToolName.PYTHON,
-            "dataframe": frame,
-            "summary": summary,
+            **stats,
+            "tool": ToolName.PYTHON.value,
+            "dataframe": transformed.get("dataframe", frame),
+            "transformed_dataframe": frame,
+            "functions_executed": list(transformed.get("functions_executed") or [])
+            + list(stats.get("functions_executed") or []),
             "capability": "python",
         }
-
-    numeric_cols = [col for col in frame.columns if pd.api.types.is_numeric_dtype(frame[col])]
-    if numeric_cols:
-        summary["numeric_means"] = {
-            col: float(frame[col].mean()) for col in numeric_cols[:8] if frame[col].notna().any()
-        }
-        for col in numeric_cols:
-            lower = str(col).lower()
-            if "success" in lower or "completion" in lower or "rate" in lower:
-                summary["focus_metric"] = col
-                summary["focus_mean"] = float(frame[col].mean())
-                break
-
-    # Lightweight WoW-style delta when period-like columns exist.
-    period_cols = [col for col in frame.columns if str(col).lower() in {"week", "period", "date_range"}]
-    if period_cols and numeric_cols:
-        period_col = period_cols[0]
-        metric_col = numeric_cols[0]
-        grouped = frame.groupby(period_col, dropna=True)[metric_col].mean().dropna()
-        if len(grouped) >= 2:
-            values = list(grouped.values)
-            summary["wow_change"] = float(values[-1] - values[-2])
-            summary["wow_change_pct"] = (
-                float((values[-1] - values[-2]) / values[-2]) if values[-2] else None
-            )
-
-    return {
-        "tool": ToolName.PYTHON,
-        "dataframe": frame,
-        "rows": frame.head(100).to_dict(orient="records"),
-        "summary": summary,
-        "capability": "python",
-    }
+    result = run_statistics(_frame_from_prior_steps(ctx.step_results), question=question)
+    result["tool"] = ToolName.PYTHON.value
+    result["capability"] = "python"
+    return result
 
 
 def _handle_visualization(ctx: StepContext) -> dict[str, Any]:
-    from tools.files.charts import build_charts
+    from tools.python.visualization_tool import run_visualization
 
-    frame = _dataframe_from_results(ctx.step_results)
+    frame = _frame_from_prior_steps(ctx.step_results)
     if frame.empty:
         rows = _rows_from_results(ctx.step_results)
         frame = pd.DataFrame(rows) if rows else pd.DataFrame()
-    charts = build_charts(frame, question=ctx.resolved_question or ctx.question)
-    return {
-        "tool": ToolName.VISUALIZATION,
-        "charts": charts,
-        "dataframe": frame,
-        "capability": "visualization",
-    }
+    result = run_visualization(
+        frame,
+        question=ctx.resolved_question or ctx.question,
+    )
+    result["tool"] = ToolName.VISUALIZATION.value
+    return result
+
+
+def _handle_recommendation(ctx: StepContext) -> dict[str, Any]:
+    from tools.python.recommendation_tool import run_recommendations
+
+    frame = _frame_from_prior_steps(ctx.step_results)
+    statistics = _statistics_from_prior_steps(ctx.step_results)
+    result = run_recommendations(
+        question=ctx.resolved_question or ctx.question,
+        statistics=statistics,
+        frame=frame,
+        rows=_rows_from_results(ctx.step_results),
+    )
+    result["tool"] = ToolName.RECOMMENDATION.value
+    return result
 
 
 def _handle_attachment(ctx: StepContext) -> dict[str, Any]:
@@ -244,6 +343,14 @@ def _collect_evidence(step_results: dict[int, dict[str, Any]]) -> str:
             chunks.append(f"Step {step_number} rows preview:\n{preview}")
         if result.get("summary"):
             chunks.append(f"Step {step_number} python summary:\n{result['summary']}")
+        if result.get("statistics"):
+            chunks.append(f"Step {step_number} statistics:\n{result['statistics']}")
+        if result.get("recommendations"):
+            chunks.append(f"Step {step_number} recommendations:\n{result['recommendations']}")
+        if result.get("chart_metadata"):
+            chunks.append(f"Step {step_number} chart metadata:\n{result['chart_metadata']}")
+        if result.get("facts"):
+            chunks.append(f"Step {step_number} knowledge graph facts:\n{result['facts']}")
         sources = result.get("sources") or []
         if sources:
             texts = [str(source.get("text", ""))[:200] for source in sources[:3] if isinstance(source, dict)]
@@ -263,6 +370,9 @@ def _best_tool_answer(step_results: dict[int, dict[str, Any]]) -> str | None:
             ToolName.RAG.value,
             ToolName.ATTACHMENT.value,
             ToolName.MEMORY.value,
+            ToolName.KNOWLEDGE_GRAPH.value,
+            ToolName.RECOMMENDATION.value,
+            ToolName.STATISTICS.value,
         }:
             continue
         answer = result.get("answer")
@@ -272,6 +382,24 @@ def _best_tool_answer(step_results: dict[int, dict[str, Any]]) -> str | None:
         if isinstance(response, QueryResponse) and response.answer:
             return str(response.answer).strip()
     return None
+
+
+def _chunks_from_results(step_results: dict[int, dict[str, Any]]) -> list[SourceChunk]:
+    chunks: list[SourceChunk] = []
+    for result in step_results.values():
+        if result.get("source_chunks"):
+            for item in result["source_chunks"]:
+                if isinstance(item, SourceChunk):
+                    chunks.append(item)
+                elif isinstance(item, dict) and item.get("id") is not None:
+                    chunks.append(SourceChunk.model_validate(item))
+        elif result.get("sources"):
+            for item in result["sources"]:
+                if isinstance(item, SourceChunk):
+                    chunks.append(item)
+                elif isinstance(item, dict) and item.get("id") is not None:
+                    chunks.append(SourceChunk.model_validate(item))
+    return chunks
 
 
 def _handle_llm(ctx: StepContext) -> dict[str, Any]:
@@ -285,6 +413,76 @@ def _handle_llm(ctx: StepContext) -> dict[str, Any]:
             "compare hubs and drivers, and answer SOP questions."
         )
         return {"tool": ToolName.LLM, "answer": answer, "capability": "conversation"}
+
+    sop_grounded_actions = {
+        "summarize_sop",
+        "summarize_key_points",
+        "compare_sops",
+    }
+    if action in sop_grounded_actions or (
+        action.startswith("summarize") and any(
+            result.get("tool") == ToolName.RAG.value for result in ctx.step_results.values()
+        )
+    ):
+        from tools.rag.confidence import (
+            agent_state_from_decision,
+            confidence_context_for_generator,
+            evaluate_and_decide,
+            policy_from_mapping,
+        )
+        from tools.rag.generator import generate
+
+        chunks = _chunks_from_results(ctx.step_results)
+        policy = policy_from_mapping(
+            ctx.step.inputs.get("retrieval_policy")
+            or (ctx.plan.retrieval_policy if ctx.plan else None)
+        )
+        decision = evaluate_and_decide(chunks, policy=policy)
+
+        if not decision.should_generate:
+            return {
+                "tool": ToolName.LLM,
+                "answer": decision.message,
+                "capability": "clarification" if decision.requires_clarification else "rag",
+                "requires_clarification": decision.requires_clarification,
+                "fallback_strategy": decision.fallback_strategy,
+                "confidence_score": decision.confidence.confidence_score,
+                "confidence_level": decision.confidence.confidence_level,
+                "confidence_breakdown": decision.confidence.confidence_breakdown.model_dump(),
+                "similarity_scores": decision.confidence.similarity_scores,
+                "retrieved_chunk_count": decision.confidence.retrieved_chunk_count,
+                "retrieved_sources": decision.confidence.retrieved_sources,
+                "confidence_reason": decision.confidence.reason,
+                "retrieval_policy": decision.policy.model_dump(),
+                "retrieval_confidence": decision.confidence.model_dump(),
+                "agent_state": agent_state_from_decision(decision),
+                "source_chunks": chunks,
+                "sources": [chunk.model_dump() for chunk in chunks],
+            }
+
+        answer = generate(
+            question,
+            chunks if not decision.use_general_knowledge else [],
+            confidence_context=confidence_context_for_generator(decision),
+        )
+        return {
+            "tool": ToolName.LLM,
+            "answer": answer,
+            "capability": "rag",
+            "fallback_strategy": decision.fallback_strategy,
+            "confidence_score": decision.confidence.confidence_score,
+            "confidence_level": decision.confidence.confidence_level,
+            "confidence_breakdown": decision.confidence.confidence_breakdown.model_dump(),
+            "similarity_scores": decision.confidence.similarity_scores,
+            "retrieved_chunk_count": decision.confidence.retrieved_chunk_count,
+            "retrieved_sources": decision.confidence.retrieved_sources,
+            "confidence_reason": decision.confidence.reason,
+            "retrieval_policy": decision.policy.model_dump(),
+            "retrieval_confidence": decision.confidence.model_dump(),
+            "agent_state": agent_state_from_decision(decision),
+            "source_chunks": chunks,
+            "sources": [chunk.model_dump() for chunk in chunks],
+        }
 
     reuse = _best_tool_answer(ctx.step_results)
     summarize_actions = {
@@ -347,10 +545,14 @@ def _handle_llm(ctx: StepContext) -> dict[str, Any]:
 
 DEFAULT_TOOL_REGISTRY: dict[str, ToolHandler] = {
     ToolName.SQL.value: _handle_sql,
+    ToolName.KNOWLEDGE_GRAPH.value: _handle_knowledge_graph,
     ToolName.RAG.value: _handle_rag,
     ToolName.MEMORY.value: _handle_memory,
+    ToolName.TRANSFORM.value: _handle_transform,
+    ToolName.STATISTICS.value: _handle_statistics,
     ToolName.PYTHON.value: _handle_python,
     ToolName.VISUALIZATION.value: _handle_visualization,
+    ToolName.RECOMMENDATION.value: _handle_recommendation,
     ToolName.ATTACHMENT.value: _handle_attachment,
     ToolName.LLM.value: _handle_llm,
 }
@@ -397,6 +599,27 @@ class PlanExecutor:
     ) -> ExecutionResult:
         """Execute the plan and return a QueryResponse plus step traces."""
         import config as _config
+
+        if getattr(_config, "MULTI_AGENT_ENABLED", False) and tool_registry_is_default(
+            self.tool_registry
+        ):
+            from agents.supervisor import SupervisorAgent
+
+            supervisor = SupervisorAgent()
+            return supervisor.execute_plan(
+                plan,
+                question=question,
+                resolved_question=resolved_question,
+                conversation_memory=conversation_memory,
+                attachment_contexts=attachment_contexts,
+                file_context=file_context,
+                attachment_ids=attachment_ids,
+                stored_attachments=stored_attachments,
+                previous_filter=previous_filter,
+                last_entity=last_entity,
+                result_context=result_context,
+                extras={"llm": self._llm} if self._llm is not None else {},
+            )
 
         if getattr(_config, "TOOL_ORCHESTRATOR_ENABLED", True) and tool_registry_is_default(
             self.tool_registry
@@ -621,6 +844,7 @@ class PlanExecutor:
         charts: list[dict[str, Any]] = []
         sources: list[SourceChunk] = []
         capability = "planner"
+        confidence_fields = _confidence_fields_from_results(step_results)
 
         for result in step_results.values():
             if result.get("sql"):
@@ -648,7 +872,7 @@ class PlanExecutor:
         for result in reversed(list(step_results.values())):
             if result.get("tool") == ToolName.LLM.value and result.get("answer"):
                 answer = result["answer"]
-                capability = "planner"
+                capability = str(result.get("capability") or "planner")
                 break
 
         # If a full QueryResponse was produced by SQL/RAG/attachment, merge useful fields.
@@ -660,45 +884,74 @@ class PlanExecutor:
                 break
 
         if embedded_response is not None:
-            return embedded_response.model_copy(
-                update={
-                    "answer": answer or embedded_response.answer,
-                    "question": question,
-                    "original_question": question,
-                    "resolved_question": resolved,
-                    "generated_sql": sql or embedded_response.generated_sql,
-                    "sql_rows": sql_rows if sql_rows is not None else embedded_response.sql_rows,
-                    "charts": charts or embedded_response.charts or [],
-                    "sources": sources or embedded_response.sources,
-                    "capability": capability or embedded_response.capability,
-                    "planning_capability": "planner",
-                    "planning_confidence": plan.confidence,
-                    "planning_reasoning": plan.reasoning,
-                    "plan_reason": plan.goal,
-                    "execution_order": execution_order,
-                    "execution_plan": plan.model_dump(),
-                    "step_results_summary": _summarize_steps(step_results),
-                }
-            )
+            update = {
+                "answer": answer or embedded_response.answer,
+                "question": question,
+                "original_question": question,
+                "resolved_question": resolved,
+                "generated_sql": sql or embedded_response.generated_sql,
+                "sql_rows": sql_rows if sql_rows is not None else embedded_response.sql_rows,
+                "charts": charts or embedded_response.charts or [],
+                "sources": sources or embedded_response.sources,
+                "capability": capability or embedded_response.capability,
+                "planning_capability": "planner",
+                "planning_confidence": plan.confidence,
+                "planning_reasoning": plan.reasoning,
+                "plan_reason": plan.goal,
+                "execution_order": execution_order,
+                "execution_plan": plan.model_dump(),
+                "step_results_summary": _summarize_steps(step_results),
+                **confidence_fields,
+            }
+            if plan.retrieval_policy and "retrieval_policy" not in update:
+                update["retrieval_policy"] = plan.retrieval_policy
+            return embedded_response.model_copy(update=update)
 
-        return QueryResponse(
-            question=question,
-            answer=answer or "I completed the planned steps but could not synthesize an answer.",
-            sources=sources,
-            capability=capability,
-            generated_sql=sql,
-            sql_rows=sql_rows,
-            charts=charts or None,
-            planning_capability="planner",
-            planning_confidence=plan.confidence,
-            planning_reasoning=plan.reasoning,
-            plan_reason=plan.goal,
-            original_question=question,
-            resolved_question=resolved,
-            execution_order=execution_order,
-            execution_plan=plan.model_dump(),
-            step_results_summary=_summarize_steps(step_results),
-        )
+        payload = {
+            "question": question,
+            "answer": answer or "I completed the planned steps but could not synthesize an answer.",
+            "sources": sources,
+            "capability": capability,
+            "generated_sql": sql,
+            "sql_rows": sql_rows,
+            "charts": charts or None,
+            "planning_capability": "planner",
+            "planning_confidence": plan.confidence,
+            "planning_reasoning": plan.reasoning,
+            "plan_reason": plan.goal,
+            "original_question": question,
+            "resolved_question": resolved,
+            "execution_order": execution_order,
+            "execution_plan": plan.model_dump(),
+            "step_results_summary": _summarize_steps(step_results),
+            **confidence_fields,
+        }
+        if plan.retrieval_policy and "retrieval_policy" not in payload:
+            payload["retrieval_policy"] = plan.retrieval_policy
+        return QueryResponse(**payload)
+
+
+def _confidence_fields_from_results(step_results: dict[int, dict[str, Any]]) -> dict[str, Any]:
+    """Prefer the latest RAG/LLM confidence payload from executed steps."""
+    for result in reversed(list(step_results.values())):
+        if result.get("confidence_level") or result.get("retrieval_confidence"):
+            fields = {
+                "retrieval_confidence": result.get("retrieval_confidence"),
+                "confidence_score": result.get("confidence_score"),
+                "confidence_level": result.get("confidence_level"),
+                "confidence_breakdown": result.get("confidence_breakdown"),
+                "similarity_scores": result.get("similarity_scores"),
+                "retrieved_chunk_count": result.get("retrieved_chunk_count"),
+                "retrieved_sources": result.get("retrieved_sources"),
+                "confidence_reason": result.get("confidence_reason"),
+                "fallback_strategy": result.get("fallback_strategy"),
+                "retrieval_policy": result.get("retrieval_policy"),
+                "requires_clarification": result.get("requires_clarification"),
+            }
+            if result.get("agent_state"):
+                fields["agent_state"] = result.get("agent_state")
+            return {key: value for key, value in fields.items() if value is not None}
+    return {}
 
 
 def _summarize_steps(step_results: dict[int, dict[str, Any]]) -> list[dict[str, Any]]:
@@ -716,6 +969,8 @@ def _summarize_steps(step_results: dict[int, dict[str, Any]]) -> list[dict[str, 
                 "chart_count": len(result.get("charts") or []),
                 "error": result.get("error"),
                 "reason": result.get("reason"),
+                "confidence_level": result.get("confidence_level"),
+                "fallback_strategy": result.get("fallback_strategy"),
             }
         )
     return summary

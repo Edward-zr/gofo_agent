@@ -1,0 +1,25 @@
+experiments:
+  - id: exp_planner_prompt
+    prompt_key: planner.planner_prompt
+    versions: [v1, v2]
+    description: Compare planner prompt versions
+    priorities: [accuracy, sql_success, scenario_success, latency, cost]
+    benchmark_limit: 40
+    scenario_limit: 10
+    mode: mock
+  - id: exp_rag_generator
+    prompt_key: rag.generator_prompt
+    versions: [v1, v2]
+    description: Compare RAG generator prompt versions
+    priorities: [accuracy, scenario_success, latency, cost]
+    benchmark_limit: 40
+    scenario_limit: 8
+    mode: mock
+  - id: exp_sql_generator
+    prompt_key: sql.generator_prompt
+    versions: [v1, v2]
+    description: Compare SQL generator prompt versions
+    priorities: [sql_success, accuracy, latency, cost]
+    benchmark_limit: 40
+    scenario_limit: 8
+    mode: mock

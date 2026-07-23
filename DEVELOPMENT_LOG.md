@@ -455,3 +455,1025 @@ pytest tests/ -q
 ---
 
 *End of session 2026-07-19 (tool orchestrator).*
+
+---
+
+# Session — 2026-07-20 (Documentation refresh + control-plane consolidation)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-20 |
+| **Branch** | `new_feature_1` (tracks `origin/new_feature_1`; evolved from `cursor-memory-version` work) |
+| **Latest commit on tip** | `4ad63a8` — *Add new feature* |
+| **Overall objective** | Before context-window reset: rewrite README to current architecture and append a complete engineering history of this Cursor conversation so a new agent can continue without chat memory |
+| **Test status at doc refresh** | **`311 passed`**, 137 warnings (`datetime.utcnow` deprecations) |
+
+---
+
+## Work Completed
+
+This conversation delivered a full agent **control plane** on top of the existing GOFO RAG/SQL/attachment stack, then refreshed permanent docs.
+
+### Features implemented
+
+1. **Project review (read-only)**
+   - Read README + DEVELOPMENT_LOG; inspected architecture before coding
+   - Established baseline: production-style local/Docker agent with IntentRouter + attachments + hybrid RAG
+
+2. **Intent Classifier (`core/intent_classifier.py`)**
+   - `IntentType` enum (Greeting, ChitChat, SOP_*, SQL_*, Dashboard, Follow_Up, Upload_File, Coding, Unknown, …)
+   - `IntentClassification` structured output (confidence, tool flags, clarification, debug reasoning)
+   - Heuristics first (greetings, SOP, SQL, dashboard, upload, follow-ups); GPT fallback via `get_llm()`
+   - Confidence &lt; 0.5 → Unknown + clarification
+   - Conversation-aware follow-up detection using memory history
+
+3. **Multi-step Planner (`core/planner.py`)**
+   - `ExecutionStep` / `ExecutionPlan` / `ToolName` / `Planner`
+   - Deterministic templates for common intents; LLM planner when no template
+   - `plan_retry(...)` builds additional SQL/RAG/Python/LLM steps from critic feedback
+   - Never answers users; never executes tools
+
+4. **Plan Executor (`core/plan_executor.py`)**
+   - Dependency-ordered tool registry wrapping existing SQL/RAG/ADA/chart/LLM handlers
+   - Later adapted to delegate to ToolOrchestrator when enabled
+
+5. **Quality Assurance (`core/quality_assurance.py`)**
+   - `EvidenceValidator`, `ReasoningValidator`, `CompletenessValidator`
+   - `DecisionEngine` → `QualityReport` / `QAAction`
+   - Extensible `register_validator()` for future validators
+   - Never generates answers; never executes tools
+
+6. **Reflection / self-critique (`core/reflection.py`)**
+   - `ReflectionResult` + `ReflectionAgent`
+   - Primary product-facing critic; uses QA validators underneath
+   - Optional LLM critique merge (`REFLECTION_USE_LLM`, default false)
+   - Bounded retries via Planner (`REFLECTION_MAX_RETRIES`, default 2)
+
+7. **Tool Orchestrator (`core/tool_orchestrator.py`)**
+   - `ToolRegistry`, `ToolExecutor`, `ToolOrchestrator`
+   - `ExecutionContext`, per-step `ExecutionResult`, `AgentState`, `OrchestrationResult`
+   - Parallel dependency waves (`ThreadPoolExecutor`); transient-error retry once
+   - Future tools via `register_tool()` without changing orchestration logic
+   - Planner = WHAT; Orchestrator = HOW
+
+8. **Agent wiring (`core/agent.py`)**
+   - Pipeline: classify → IntentRouter (attachments) → plan → orchestrate/dispatch → reflect/QA → optional `plan_retry`
+   - Business `classifier_intent` preserved for API compatibility; new taxonomy in `intent_classification`
+   - Response fields: `execution_plan`, `quality_report`, `reflection_result`, `agent_state`, retry counts
+
+9. **Config / env**
+   - `DEBUG`, `INTENT_CLASSIFIER_ENABLED`, `PLANNER_ENABLED`
+   - `QUALITY_ASSURANCE_*`, `REFLECTION_*`, `TOOL_ORCHESTRATOR_*`
+   - Updated `.env.example`
+
+10. **Tests**
+    - `tests/test_core_intent_classifier.py`
+    - `tests/test_core_planner.py`
+    - `tests/test_plan_executor.py`
+    - `tests/test_quality_assurance.py`
+    - `tests/test_reflection.py`
+    - `tests/test_tool_orchestrator.py`
+    - `tests/conftest.py` disables planner/QA/reflection execution by default for legacy integration tests
+
+11. **Documentation**
+    - Incremental README/DEVELOPMENT_LOG updates during feature work
+    - Full README rewrite (this session) to current branch state
+    - This consolidation DEVELOPMENT_LOG entry
+
+### Bugs fixed / hardening during integration
+
+- Classifier GPT failures in sandboxed tests → safer try/except + broader SQL heuristics
+- Overwriting business `classifier_intent` with new IntentType broke conversational tests → keep legacy Intent values on `classifier_intent`
+- Planner/QA/Reflection enabling by default broke integration tests that call live OpenAI → conftest disables those flags; unit tests cover modules directly
+- LLM summarize steps calling live API during plan execution → reuse substantive SQL/RAG/attachment answers for summarize actions when present
+- Parallel orchestrator race on AgentState → workers return outputs; main thread commits state
+- DecisionEngine forcing retrieval retries for SQL-only answers → fixed scoring/priority so SQL evidence does not incorrectly trigger RAG retry
+
+### Refactoring / architecture
+
+- Evolved from “router → one tool” to multi-stage control plane without introducing LangGraph
+- Kept `IntentRouter` for attachment session semantics
+- Kept `tools/planner/*` capability planner and business Intent enum (not deleted)
+- PlanExecutor remains as adapter/fallback for mocked registries in tests
+
+### UI / backend / Docker / RAG / memory
+
+- No Streamlit redesign in this conversation (UI already had attachments/charts from prior work)
+- Backend: agent pipeline + config flags only
+- No Dockerfile changes in this conversation (prior session already had CJK fonts + mounts)
+- Hybrid RAG unchanged functionally; still behind `retrieve()`
+- Memory modules unchanged except being consumed by classifier/planner/reflection context
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `core/intent_classifier.py` | Primary intent classification |
+| `core/planner.py` | Multi-step ExecutionPlan + retry planning |
+| `core/plan_executor.py` | Tool execution adapter / legacy sequential runner |
+| `core/quality_assurance.py` | Multi-stage QA validators + DecisionEngine |
+| `core/reflection.py` | ReflectionAgent / ReflectionResult critic API |
+| `core/tool_orchestrator.py` | Parallel/sequential tool orchestration + AgentState |
+| `tests/test_core_intent_classifier.py` | Classifier unit tests |
+| `tests/test_core_planner.py` | Planner unit tests |
+| `tests/test_plan_executor.py` | PlanExecutor unit tests |
+| `tests/test_quality_assurance.py` | QA unit tests |
+| `tests/test_reflection.py` | Reflection unit tests |
+| `tests/test_tool_orchestrator.py` | Orchestrator unit tests |
+
+*(Earlier conversation sessions also created attachment/hybrid modules; those predate this control-plane work and remain documented in prior DEVELOPMENT_LOG entries.)*
+
+---
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/agent.py` | Wire classifier → planner → orchestrator/dispatcher → reflection/QA |
+| `core/models.py` | Add plan/QA/reflection/agent_state response fields |
+| `core/plan_executor.py` | Delegate to ToolOrchestrator when enabled |
+| `config.py` | Feature flags for all new stages |
+| `.env.example` | Document new env vars |
+| `tests/conftest.py` | Disable planner/QA/reflection by default in agent integration tests |
+| `README.md` | Full rewrite to current architecture (2026-07-20) |
+| `DEVELOPMENT_LOG.md` | Append feature sessions + this consolidation entry |
+
+---
+
+## Problems Encountered
+
+### Problem 1 — New pipeline broke existing agent integration tests
+
+**Root Cause:** Classifier/planner/executor paths called live OpenAI; also overwrote `analysis.intent` with new IntentType strings (`SQL_Analysis` vs `ROOT_CAUSE`).
+
+**Solution:** Safer classifier fallbacks; preserve business Intent on `classifier_intent`; conftest disables planner/QA/reflection execution for legacy tests; dedicated unit tests with mocks.
+
+**Lessons learned:** When adding a new taxonomy, keep the public API field stable or dual-write. Feature flags + conftest defaults protect the suite.
+
+### Problem 2 — Parallel orchestration mutated shared state
+
+**Root Cause:** ThreadPool workers updated `ExecutionContext` / `AgentState` concurrently.
+
+**Solution:** `commit_state=False` in workers; main thread commits results after futures complete.
+
+**Lessons learned:** Parallel tool waves need immutable-ish inputs and main-thread state merges.
+
+### Problem 3 — QA DecisionEngine over-triggered retrieval retries
+
+**Root Cause:** Low evidence score automatically set `should_retry_retrieval` even for SQL-only answers.
+
+**Solution:** Only retry retrieval when evidence validator requests it; improve SQL numeric grounding scores; prefer SQL/plan retries for analytical gaps.
+
+**Lessons learned:** Critic actions must be capability-aware.
+
+### Problem 4 — Branch rename / tip vs docs drift
+
+**Root Cause:** Work began on `cursor-memory-version` docs narrative; tip is now `new_feature_1` with commit `4ad63a8`.
+
+**Solution:** This README rewrite documents `new_feature_1` as current branch and keeps historical DEVELOPMENT_LOG entries intact.
+
+**Lessons learned:** Always re-check `git branch` / `git log` before permanent docs refresh.
+
+---
+
+## Important Decisions
+
+1. **No LangGraph** — modular stages only; “LangGraph integration” means clean boundaries for a future wrapper.
+2. **Do not delete IntentRouter / tools.planner** — attachment semantics and business Intent remain.
+3. **Reflection is primary critic; QA is scoring engine** — avoid two competing retry loops in production path.
+4. **Planner never executes; Orchestrator never plans.**
+5. **Max 2 critic retries** — always return best-effort after limit.
+6. **Tests disable heavy control-plane flags by default** — unit tests cover new modules with mocks.
+7. **Excel `read_only` ban remains** — unchanged from prior sessions.
+8. **README = current; DEVELOPMENT_LOG = append-only** — this entry consolidates chat history for the next agent.
+
+---
+
+## Testing
+
+### Tests performed
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_core_intent_classifier.py tests/test_core_planner.py tests/test_plan_executor.py -q
+pytest tests/test_quality_assurance.py tests/test_reflection.py -q
+pytest tests/test_tool_orchestrator.py tests/test_plan_executor.py -q
+pytest tests/ -q
+```
+
+### Results
+
+- Focused module suites: passed during implementation
+- Full suite at documentation refresh (2026-07-20): **`311 passed`**, 137 warnings (mostly `datetime.utcnow` deprecation)
+
+### Remaining issues
+
+- Stale attachment/DataFrame cache invalidation on re-upload still open (prior roadmap)
+- Chart defaults for Chinese logistics columns still open
+- `datetime.utcnow()` deprecations across memory modules
+- Broadening orchestrator coverage for Follow_Up / Upload_File without regressing conversation repair
+- Commit message `Add new feature` is vague; consider clearer commits next session
+
+---
+
+## Next Recommended Tasks
+
+1. **Session cache invalidation** — when a new upload arrives or content hash changes, drop stale `_processed_cache` / DataFrame store entries.
+2. **Chart UX for logistics columns** — prefer `城市` / `司机` / `揽收状态` / weight metrics; avoid ID-like columns in auto-visualize.
+3. **Agent integration tests for Reflection retry** — enable `REFLECTION_ENABLED` in a focused test with mocked tools to prove approve/retry/ask_user end-to-end.
+4. **Replace `datetime.utcnow()`** with timezone-aware UTC across memory/models.
+5. **SQL safety / templates** for top operational KPIs (deterministic paths).
+6. **CI** — GitHub Action running `pytest` on push to `new_feature_1`.
+7. **Optional:** rename/clarify next commits; avoid committing uploads/chroma/logs.
+
+---
+
+## Notes for Future Agents
+
+- Start with **README.md**, then the **latest DEVELOPMENT_LOG sessions** (2026-07-19 control plane + this 2026-07-20 consolidation).
+- Current branch is **`new_feature_1`**, not necessarily `cursor-memory-version`.
+- Control-plane files live under `core/`: `intent_classifier.py`, `planner.py`, `plan_executor.py`, `tool_orchestrator.py`, `quality_assurance.py`, `reflection.py`.
+- Do **not** recreate those modules; extend them.
+- Preview/analysis Excel must keep using `tools.files.excel_reader`.
+- `tests/conftest.py` intentionally sets `PLANNER_ENABLED`, `QUALITY_ASSURANCE_ENABLED`, and `REFLECTION_ENABLED` to false for most agent integration tests.
+- Prior attachment/hybrid/matplotlib work is still valid and must be preserved.
+- This documentation supersedes ephemeral Cursor chat memory for engineering continuity.
+
+---
+
+*End of session 2026-07-20 (documentation refresh + control-plane consolidation).*
+
+---
+
+# Session — 2026-07-20 (Data Source Selection + Knowledge Graph)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-20 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Improve Planner to choose the minimum necessary data sources before Tool Orchestration (SQL / Knowledge Graph / RAG / Memory / Python) |
+| **Test status** | **`321 passed`** |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **Data Source Selection layer** (`core/data_source_selector.py`)
+   - `DataSource`, `SelectedSource`, `DataSourceSelection`, `DataSourceSelector`
+   - Rules: SQL for metrics/KPIs; KG for relationships; RAG for SOPs/explanations; Memory for follow-ups; Python only for calc/stats/forecast/charts
+   - Combines sources only when necessary
+   - Never executes tools; never answers the user
+
+2. **Knowledge Graph tool** (`tools/knowledge_graph/`)
+   - Driver → Hub → Region (SQLite drivers + hub/region map)
+   - Manager → Hub (demo org map)
+   - SOP ownership map
+   - Demo alias `Driver John` → `Logan Clark` (Chicago / Midwest)
+   - Consumes prior SQL rows when resolving “who manages lowest-rate hub”
+
+3. **Planner rewired**
+   - `DATA_SOURCE_SELECTION_ENABLED` (default true)
+   - Builds `ExecutionPlan` from selection: `selected_data_sources`, `source_reasons`, `expected_outputs`, `data_source_selection`
+   - `ToolName.KNOWLEDGE_GRAPH` added
+   - Stops always adding Python for SQL_Analysis rankings
+
+4. **Execution wiring**
+   - `_handle_knowledge_graph` in `plan_executor.py`
+   - Registered in ToolOrchestrator default registry (+ KG aliases)
+   - Agent planner intents expanded to SQL_Query / SOP_QA / SOP_Summary / Follow_Up / Explain_Result
+
+5. **Tests**
+   - `tests/test_data_source_selector.py` — all user examples
+   - `tests/test_knowledge_graph.py`
+   - Updated `tests/test_core_planner.py` for minimum-tool behavior
+
+### Example plans (verified in tests)
+
+| Question | Sources |
+|----------|---------|
+| What is today's pickup rate? | SQL only |
+| Which region does Driver John belong to? | Knowledge Graph only |
+| Explain the pickup SOP. | RAG only |
+| Compare Chicago's pickup rate with yesterday and explain possible reasons. | SQL + RAG |
+| Who manages the hub with the lowest pickup rate? | SQL + Knowledge Graph |
+| Compare Midwest performance and generate a trend chart. | SQL + Python + Visualization |
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `core/data_source_selector.py` | Data Source Selection layer |
+| `tools/knowledge_graph/__init__.py` | KG package exports |
+| `tools/knowledge_graph/service.py` | Relationship query service |
+| `tests/test_data_source_selector.py` | Selection + planner plan tests |
+| `tests/test_knowledge_graph.py` | KG unit tests |
+
+---
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/planner.py` | Selection-first planning; plan metadata; KG tool name |
+| `core/plan_executor.py` | KG handler + evidence reuse |
+| `core/tool_orchestrator.py` | Register KG; store KG facts in AgentState |
+| `core/agent.py` | Broader planner intent coverage |
+| `config.py` / `.env.example` | `DATA_SOURCE_SELECTION_ENABLED` |
+| `tests/test_core_planner.py` | Ranking no longer requires Python |
+| `README.md` | Current architecture with source selection |
+| `DEVELOPMENT_LOG.md` | This session |
+
+---
+
+## Problems Encountered
+
+### Problem 1 — Ranking plans previously always called Python
+
+**Root Cause:** SQL_Analysis templates always appended a PYTHON derive-KPI step.
+
+**Solution:** Data Source Selection only adds PYTHON for calculate/statistics/forecast/chart signals; rankings stay SQL (+ LLM).
+
+**Lessons learned:** Tool presence should be driven by question need, not intent label alone.
+
+### Problem 2 — No real Knowledge Graph existed
+
+**Root Cause:** Relationships were previously answered (poorly) via SQL/LLM only.
+
+**Solution:** Lightweight KG service over drivers SQLite + static hub/region/manager/SOP maps; Planner selects it explicitly.
+
+**Lessons learned:** Keep KG as a first-class tool so selection can choose it without inventing SQL joins for org structure.
+
+---
+
+## Important Decisions
+
+1. **DataSourceSelector runs before plan step construction** — Planner consumes selection; Orchestrator still does not plan.
+2. **Minimum necessary sources** — do not fan out to every tool.
+3. **KG depends on SQL when both selected** — supports “lowest rate hub → manager”.
+4. **Python is not the default for analytics** — only calc/stats/forecast/charts.
+5. **`DATA_SOURCE_SELECTION_ENABLED=true` by default**; legacy templates remain as fallback when disabled.
+
+---
+
+## Testing
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_data_source_selector.py tests/test_knowledge_graph.py tests/test_core_planner.py -q
+pytest tests/ -q
+```
+
+**Results:** focused suites passed; full suite **`321 passed`**, 137 warnings (`datetime.utcnow`).
+
+**Remaining issues:** expand real org KG beyond demo maps; optional LLM-assisted source selection for ambiguous multi-domain questions.
+
+---
+
+## Next Recommended Tasks
+
+1. Persist richer org graph (managers, regions) in SQLite instead of static maps.
+2. Surface `selected_data_sources` / `source_reasons` in Streamlit debug panel.
+3. Add integration test where Reflection retries change source selection.
+4. Continue prior roadmap: stale attachment cache invalidation; `datetime.utcnow` cleanup; CI.
+
+---
+
+## Notes for Future Agents
+
+- Read `core/data_source_selector.py` before changing planner templates.
+- Do not reintroduce “always call Python for SQL_Analysis”.
+- Extend `tools/knowledge_graph/service.py` for new relationship types; register via existing ToolRegistry.
+- ExecutionPlan fields `selected_data_sources`, `source_reasons`, `expected_outputs` are part of the public plan contract.
+
+---
+
+*End of session 2026-07-20 (Data Source Selection + Knowledge Graph).*
+
+---
+
+# Session — 2026-07-22 (SQL Schema Retriever)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Retrieve only relevant tables/columns/joins before SQL generation instead of dumping the full schema into the LLM prompt |
+| **Test status** | **`332 passed`** |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **Schema Registry** (`tools/sql/schema_registry.py`)
+   - Live load via SQLite `PRAGMA table_info` / `foreign_key_list`
+   - Stores tables, columns, PKs, FKs, curated descriptions/keywords
+   - Auto-refresh when DB mtime changes; `refresh_schema_registry()` for explicit rebuild
+
+2. **Schema Retriever** (`tools/sql/schema_retriever.py`)
+   - Input: question + business intent / semantic context
+   - Output: `RetrievedSchema` with tables, columns, relationships, candidates, scores
+   - Strategy: business intent hints + keyword/description matching + optional embedder hook
+   - Never returns full schema unless explicitly requested (“full schema”, “all tables”, …)
+
+3. **SQL pipeline rewired** (`tools/sql/service.py`)
+   - Question → Business Understanding → Schema Retriever → Generator → Validator → Executor
+   - Generator (`planner.plan`) uses **only** retrieved schema in the system prompt
+   - Validator (`tools/sql/validator.py`) rejects invented tables/columns
+
+4. **AgentState / QueryResponse**
+   - `retrieved_schema`, `candidate_tables`, `candidate_columns` stored on AgentState + API response
+   - `_handle_sql` / orchestrator `_update_agent_state` wired
+
+5. **Debug**
+   - `DEBUG` or `SCHEMA_RETRIEVER_DEBUG` prints intent, tables, columns, joins, scores
+
+6. **Tests**
+   - `tests/test_schema_retriever.py` + updated SQL planner/service tests
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `tools/sql/schema_registry.py` | Schema Registry + refresh |
+| `tools/sql/schema_retriever.py` | Relevant schema retrieval |
+| `tools/sql/validator.py` | SQL allowlist validation |
+| `tests/test_schema_retriever.py` | Registry/retriever/validator tests |
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `tools/sql/planner.py` | Generate SQL from retrieved schema only |
+| `tools/sql/service.py` | Full schema-aware pipeline |
+| `tools/sql/schema_loader.py` | Prefer registry text helper |
+| `tools/sql/__init__.py` | Export new APIs |
+| `core/models.py` | Response fields for retrieved schema |
+| `core/tool_orchestrator.py` | AgentState schema fields |
+| `core/plan_executor.py` | Pass through schema metadata from SQL tool |
+| `config.py` / `.env.example` | Schema retriever flags |
+| `tests/test_sql_*.py` | Prompt assertions updated |
+| `README.md` / `DEVELOPMENT_LOG.md` | Current docs |
+
+---
+
+## Important Decisions
+
+1. **Never dump full schema by default** — replaces the previous triple schema injection.
+2. **Join expansion is conservative** — adding a satellite table pulls in `pickups` for joins; selecting `pickups` alone does **not** pull every FK parent.
+3. **Validator uses full registry allowlist** — retrieval can be narrow; validation still rejects unknown objects against the live DB.
+4. **Embedding retrieval is optional/off by default** — `SchemaEmbedder` protocol is ready for future vector search.
+
+---
+
+## Testing
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_schema_retriever.py tests/test_sql_planner.py tests/test_sql_service.py -q
+pytest tests/ -q
+```
+
+**Results:** **`332 passed`**, 137 warnings.
+
+---
+
+## Next Recommended Tasks
+
+1. Implement OpenAI embedding `SchemaEmbedder` behind `SCHEMA_EMBEDDING_RETRIEVAL_ENABLED`.
+2. Surface retrieved schema in Streamlit debug UI.
+3. Persist SQLite `COMMENT` metadata if warehouses add column comments.
+4. Prior roadmap: attachment cache invalidation, `datetime.utcnow` cleanup, CI.
+
+---
+
+## Notes for Future Agents
+
+- Do not reintroduce full `SCHEMA` + live schema + hardcoded schema triple dumps into `planner._build_system_prompt`.
+- Extend descriptions/keywords in `schema_registry.py` when adding tables — retrieval picks them up automatically after refresh.
+- Call `refresh_schema_registry()` after DB migrations.
+
+---
+
+*End of session 2026-07-22 (SQL Schema Retriever).*
+
+---
+
+# Session — 2026-07-22 (Specialized Python Analytics Tools)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Replace monolithic Python analytics with specialized tools (Transform / Statistics / Visualization / Recommendation) |
+| **Test status** | **`339 passed`** |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **`tools/python/transformation_tool.py`** — filter/sort/groupby/pivot/rename/fillna/date conversion
+2. **`tools/python/statistics_tool.py`** — mean/median/min/max, percentages, ratios, growth, ranking, correlation
+3. **`tools/python/visualization_tool.py`** — wraps matplotlib `build_charts`; returns charts + chart_metadata
+4. **`tools/python/recommendation_tool.py`** — business insights from statistics (never raw SQL)
+
+### Planner routing
+
+```text
+SQL → TRANSFORM → STATISTICS → VISUALIZATION (if requested) → RECOMMENDATION (if requested) → LLM
+```
+
+- DataSourceSelector emits TRANSFORM+STATISTICS instead of monolithic PYTHON
+- `ToolName.PYTHON` kept as backward-compatible alias → StatisticsTool
+- Dashboard template updated to specialized tool chain
+
+### AgentState
+
+Stores: `dataframe`, `transformed_dataframe`, `statistics`, `chart_metadata`, `recommendations`
+
+### Debug
+
+`DEBUG` or `PYTHON_TOOLS_DEBUG` prints tool name, functions executed, shape, stats/charts/recommendations, execution time.
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `tools/python/__init__.py` | Package exports |
+| `tools/python/transformation_tool.py` | DataFrame prep |
+| `tools/python/statistics_tool.py` | Metric computation |
+| `tools/python/visualization_tool.py` | Charts |
+| `tools/python/recommendation_tool.py` | Business recommendations |
+| `tests/test_python_tools.py` | Unit + planner routing tests |
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/planner.py` | New ToolNames + dependency order + dashboard template |
+| `core/data_source_selector.py` | Select specialized Python tools |
+| `core/plan_executor.py` | Handlers for TRANSFORM/STATISTICS/VISUALIZATION/RECOMMENDATION |
+| `core/tool_orchestrator.py` | AgentState fields + registry aliases |
+| `config.py` / `.env.example` | `PYTHON_TOOLS_DEBUG` |
+| `tests/test_data_source_selector.py` | Chart plan expectations |
+| `README.md` / `DEVELOPMENT_LOG.md` | Docs |
+
+---
+
+## Important Decisions
+
+1. **LLM never calculates** — only explains Python tool outputs.
+2. **Single responsibility per tool** — easy to extend with future analytics tools.
+3. **Keep `PYTHON` alias** — existing plans/tests that emit PYTHON still work.
+4. **Recommendation only when requested / dashboard / chart analytics path** — avoid forcing it onto every SQL+KG question.
+
+---
+
+## Testing
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_python_tools.py tests/test_data_source_selector.py -q
+pytest tests/ -q
+```
+
+**Results:** **`339 passed`**
+
+---
+
+## Next Recommended Tasks
+
+1. Surface `statistics` / `chart_metadata` / `recommendations` in Streamlit debug panel.
+2. Add forecast tool under `tools/python/` when product requests forecasting.
+3. Continue prior roadmap: attachment cache invalidation, `datetime.utcnow` cleanup, CI.
+
+---
+
+## Notes for Future Agents
+
+- Do not recreate a monolithic `analytics.py`.
+- Extend by adding new files under `tools/python/` and registering handlers in `DEFAULT_TOOL_REGISTRY`.
+- Visualization still reuses `tools.files.charts.build_charts` for PNG rendering.
+
+---
+
+*End of session 2026-07-22 (Specialized Python Analytics Tools).*
+
+---
+
+# Session — 2026-07-22 (Clarification Manager)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Prevent hallucinations by asking for missing business parameters after Planner and before Tool Orchestrator; resume the original plan after the user answers |
+| **Test status** | **`350 passed`** |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **`core/clarification_manager.py`**
+   - Detects ambiguous ops questions (best driver metric, performance scope, compare periods, top customers metric, short ranking without time)
+   - Multiple-choice options; accepts option number or label
+   - `PendingClarification` stores `original_question`, `missing_fields`, `pending_question`, `user_response`, draft plan
+   - `apply_user_response()` enriches the question and returns a resume decision
+   - Skips when conversation memory already fills the slot or confidence + question are rich
+   - Debug via `DEBUG` / `CLARIFICATION_DEBUG`
+
+2. **Agent pipeline wiring** (`core/agent.py`)
+   - Pipeline: Classifier → Planner → **ClarificationManager** → Tool Orchestrator
+   - Session-scoped `pending_clarification` on `GOFOAgent`
+   - Next turn resumes with enriched `resolved_question`; filled metric/date slots survive `memory.add_turn`
+   - Reflection ask-user also seeds pending clarification
+
+3. **Models / config**
+   - `QueryResponse`: `requires_clarification`, `clarification_question`, `clarification_options`, `missing_fields`
+   - `AgentState`: `original_question`, `missing_fields`, `pending_question`, `user_response`
+   - `CLARIFICATION_MANAGER_ENABLED` (default true), `CLARIFICATION_DEBUG`
+
+4. **Tests**
+   - `tests/test_clarification_manager.py` — detection, memory skip, resume, agent ask→answer→execute
+   - Conftest disables Clarification Manager by default for unrelated agent tests
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `core/clarification_manager.py` | Clarification Manager |
+| `tests/test_clarification_manager.py` | Unit + agent resume tests |
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/agent.py` | Wire evaluate/resume; persist slots on response |
+| `core/models.py` | Clarification response fields |
+| `core/tool_orchestrator.py` | AgentState clarification fields |
+| `tools/memory/conversation.py` | Prefer `business_metric` in `_infer_metric` |
+| `config.py` / `.env.example` | Feature flags |
+| `tests/conftest.py` | Disable clarification by default in agent tests |
+| `README.md` / `DEVELOPMENT_LOG.md` | Docs |
+
+---
+
+## Important Decisions
+
+1. **Never guess missing business parameters** — ask only when required.
+2. **Pending state lives on the session agent**, not ephemeral orchestrator state, so multi-turn resume works.
+3. **Skip when memory already has the slot** — explicit skip reason for debug.
+4. **Resume does not restart the conversation** — same draft plan context, enriched question.
+
+---
+
+## Testing
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_clarification_manager.py -q
+pytest tests/ -q
+```
+
+**Results:** **`350 passed`**, 139 warnings.
+
+---
+
+## Next Recommended Tasks
+
+1. Surface clarification options as clickable chips in Streamlit.
+2. Expand patterns (custom date range picker, region filters).
+3. Continue prior roadmap: attachment cache invalidation, `datetime.utcnow` cleanup, CI.
+
+---
+
+## Notes for Future Agents
+
+- Extend ambiguity patterns in `_detect_ambiguity`; keep memory-fill logic in `evaluate()`.
+- Do not re-enable Clarification Manager in unrelated agent tests without mocking PlanExecutor.
+- After user answers, set `response.business_metric` / `date_range` so memory does not overwrite clarification slots.
+
+---
+
+*End of session 2026-07-22 (Clarification Manager).*
+
+---
+
+# Session — 2026-07-22 (Adaptive Retrieval Confidence Engine)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Evaluate retrieval quality with multi-signal adaptive scoring before generation; never answer confidently when evidence is weak; Planner controls fallbacks |
+| **Test status** | **`363 passed`** |
+
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **`tools/rag/confidence.py`**
+   - Weighted signals: highest similarity 40%, average 30%, chunk count 15%, source diversity 10%, metadata quality 5%
+   - Levels: HIGH ≥0.80 / MEDIUM 0.60–0.79 / LOW &lt;0.60
+   - Decision Engine: GENERATE_CONFIDENT / GENERATE_CAUTIOUS / CLARIFY / DOCUMENT_REQUEST / GENERAL_KNOWLEDGE / REFUSE
+   - `RetrievalPolicy` from Planner (`allow_general_knowledge`, `minimum_confidence`, `allow_clarification`, `allow_document_request`)
+   - Tunable weights via `RETRIEVAL_CONF_W_*` (normalized at runtime)
+
+2. **RAG service / generator**
+   - Pipeline: Retriever → Confidence → Decision → Generator
+   - Removed hard `SIMILARITY_THRESHOLD` generation gate
+   - Generator receives confidence context and adapts prompts (cautious / general-knowledge disclaimer)
+
+3. **Planner + PlanExecutor**
+   - `ExecutionPlan.retrieval_policy` injected into RAG/LLM steps
+   - SOP templates use strict policy (no general knowledge by default)
+   - `_handle_llm` SOP summarize path uses confidence + `generate()`
+
+4. **AgentState / QueryResponse**
+   - Stores confidence_score/level/breakdown, similarity_scores, sources, reason, fallback_strategy, policy
+
+5. **Tests**
+   - `tests/test_retrieval_confidence.py` + updated `test_service.py` / `test_generator.py`
+
+---
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| `tools/rag/confidence.py` | Adaptive confidence + decision engine |
+| `tests/test_retrieval_confidence.py` | Unit + planner policy tests |
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `tools/rag/service.py` | Confidence before generate |
+| `tools/rag/generator.py` | Confidence-aware prompts |
+| `tools/rag/__init__.py` | Export confidence APIs |
+| `core/planner.py` | `retrieval_policy` on plans |
+| `core/plan_executor.py` | Wire policy + SOP grounded generate |
+| `core/tool_orchestrator.py` | AgentState confidence fields |
+| `core/models.py` | Response confidence fields |
+| `config.py` / `.env.example` | Flags + weight knobs |
+| `README.md` / `DEVELOPMENT_LOG.md` | Docs |
+
+---
+
+## Important Decisions
+
+1. **No single similarity threshold** as a generation gate — adaptive multi-signal score only.
+2. **LOW never produces a confident SOP answer** — clarify → document request → general knowledge (Planner only) → refuse.
+3. **General knowledge must be explicitly permitted** and always carries the disclaimer.
+4. **Weights live in config** so tuning does not change business logic.
+
+---
+
+## Testing
+
+```bash
+export PYTHONPATH=.
+pytest tests/test_retrieval_confidence.py tests/test_service.py tests/test_generator.py -q
+pytest tests/ -q
+```
+
+**Results:** **`363 passed`**, 139 warnings.
+
+---
+
+## Notes for Future Agents
+
+- Extend scoring in `evaluate_retrieval`; keep Decision Engine policy-driven.
+- Do not reintroduce a hard `SIMILARITY_THRESHOLD` skip before generate.
+- When adding new document collections, reuse `evaluate_and_decide` — it is collection-agnostic.
+
+---
+
+*End of session 2026-07-22 (Adaptive Retrieval Confidence Engine).*
+
+---
+
+# Session — 2026-07-22 (Evaluation & Scenario Benchmark Framework)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Add a continuous evaluation framework for benchmark questions + multi-turn scenarios (accuracy, tools, latency, cost, reliability) with markdown reports and regression compare |
+| **Test status** | framework tests green; full suite pending |
+
+---
+
+## Work Completed
+
+1. **`evaluation/` package**
+   - Datasets: 200 SOP / 100 SQL / 50 general / 50 follow-up / 30 memory / 20 upload / 40 scenarios
+   - `runner.py`, `scenario_runner.py`, `evaluator.py`, `metrics.py`, `report.py`, `compare.py`
+   - `agent_adapter.py` with live + mock modes
+   - One command: `python -m evaluation`
+
+2. **Scoring**
+   - Semantic keyword proxy (no exact answer match)
+   - Tool selection/order, behavior match, SQL success, retrieval confidence
+   - Latency, tokens, estimated cost
+   - Suite + overall agent scorecard
+
+3. **Artifacts**
+   - JSON under `evaluation/results/`
+   - `latest_report.md` with executive summary, failures, regressions, recommendations
+
+---
+
+## How to run
+
+```bash
+export PYTHONPATH=.
+python -m evaluation --generate-datasets
+python -m evaluation --mode mock
+python -m evaluation --mode live --limit 20
+pytest tests/test_evaluation_framework.py -q
+```
+
+---
+
+## Notes for Future Agents
+
+- Add questions to `evaluation/datasets/*.json` or regenerate via `generate_datasets.py`.
+- Prefer `--mode live` for release gating; mock mode is for offline smoke/CI of the framework itself.
+- Extend metrics in `metrics.py` / `evaluator.py` without changing runners.
+
+---
+
+*End of session 2026-07-22 (Evaluation Framework).*
+
+---
+
+# Session — 2026-07-22 (Enterprise Prompt Registry & Experiment Framework)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-22 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Replace monolithic/inline prompts with a centralized versioned Prompt Registry as the single source of truth for LLM interactions (discovery, metadata, rendering, config, experiments) |
+| **Test status** | **`375 passed`** (full suite) |
+
+---
+
+## Work Completed
+
+1. **Core modules**
+   - `core/prompt_validator.py` — YAML frontmatter → `PromptMetadata`
+   - `core/prompt_renderer.py` — `{{variable}}` rendering + required-variable checks
+   - `core/prompt_registry.py` — discover/load/cache, active/candidate/experimental, `PROMPT_EXPERIMENT`, hot reload, persist active
+   - `core/prompt_manager.py` — `get` / `render` / `build_messages` / `invoke` / `llm_for` (metadata → LLM client)
+   - `core/prompt_experiments.py` — run eval per version, recommend by priorities, write reports
+
+2. **Prompt assets** under `prompts/` (router, planner, sql, rag, python, recommendation, reflection, clarification, shared) with `registry.yaml` + `experiments.yaml`
+
+3. **Wiring** — Planner, intent classifier, reflection, router planner, SQL generator/summarizer, RAG rewriter/generator all go through PromptManager (no direct file loads)
+
+4. **LLM client** — `get_llm(temperature=..., max_tokens=..., model=...)` with cache; parameters come from prompt metadata
+
+5. **CLI** — `python -m evaluation.prompt_experiments` (`--list`, `--activate key:version`, run experiments)
+
+6. **Tests** — `tests/test_prompt_registry.py`; SQL/RAG/planner tests updated for registry path
+
+7. **Docs** — README Prompt Registry section + env vars; this session log
+
+---
+
+## How to use
+
+```bash
+export PYTHONPATH=.
+python -m evaluation.prompt_experiments --list
+export PROMPT_EXPERIMENT=planner.planner_prompt:v2
+python -m evaluation.prompt_experiments --activate planner.planner_prompt:v2 --persist
+python -m evaluation.prompt_experiments --mode mock
+pytest tests/test_prompt_registry.py -q
+```
+
+Debug: `PROMPT_DEBUG=true` or `DEBUG=true`.
+
+---
+
+## Important Decisions
+
+- Components never open prompt files; only PromptManager/Registry.
+- Temperature / max_tokens / model live in prompt frontmatter, not call sites.
+- Active version switches via `registry.yaml` or `PROMPT_EXPERIMENT` without code changes.
+- Experiments reuse the evaluation framework; priorities configurable per experiment.
+
+---
+
+## Notes for Future Agents
+
+- Add new prompts as `prompts/<family>/<name>_vN.md` + update that family's `registry.yaml`.
+- Prefer `manager.invoke(...)` or `build_messages` + `manager.llm_for(selection)`.
+- Do not reintroduce hardcoded system prompts in tools.
+- Expand frontmatter `includes:` for shared rules instead of duplicating policy text.
+
+---
+
+*End of session 2026-07-22 (Prompt Registry).*
+
+---
+
+# Session — 2026-07-23 (Multi-Agent Architecture + Agent Registry)
+
+## Session Information
+
+| Field | Value |
+|-------|--------|
+| **Date** | 2026-07-23 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Refactor execution into Supervisor + Agent Registry with specialized agents; Planner routes by capability; Supervisor has no business logic |
+| **Test status** | **`381 passed`** (full suite) |
+
+---
+
+## Work Completed
+
+1. **`agents/` package**
+   - `base.py` — `BaseAgent`, `AgentTask`, `AgentResponse`, `AgentHealth`, `AgentCapability`, `TOOL_TO_CAPABILITY`
+   - `registry/agent_registry.py` — register / discover / select by capability / health
+   - `supervisor/supervisor_agent.py` — capability dispatch, parallel waves, merge
+   - Specialized: RAG, SQL, Analytics, General
+   - Support: Memory, Reflection, Recommendation
+   - Thin adapters over existing `plan_executor` tool handlers (`agents/_bridge.py`)
+
+2. **Planner** — `ExecutionPlan.required_capabilities` populated in `_finalize_plan`
+
+3. **PlanExecutor** — when `MULTI_AGENT_ENABLED` + default tool registry → Supervisor; else ToolOrchestrator / sequential
+
+4. **Config** — `MULTI_AGENT_*` flags; tests disable multi-agent by default in `conftest.py`
+
+5. **Tests** — `tests/test_multi_agent.py`
+
+---
+
+## How to use
+
+```bash
+export MULTI_AGENT_ENABLED=true
+export MULTI_AGENT_DEBUG=true
+pytest tests/test_multi_agent.py -q
+```
+
+Add a new agent: subclass `BaseAgent`, declare capabilities, `registry.register(agent)` — do not edit Supervisor.
+
+---
+
+## Important Decisions
+
+- Supervisor never hardcodes agent names; only capability → Registry lookup.
+- Agents wrap existing tools/services (no duplicated SQL/RAG business logic).
+- Parallel execution for independent plan steps (dependency waves).
+- Unhealthy agents skipped when healthier alternatives exist.
+
+---
+
+## Notes for Future Agents
+
+- Future: Knowledge Graph / Forecast / Search / Vision / API agents — register with new capabilities only.
+- Keep `MULTI_AGENT_ENABLED=false` in unit tests that assert ToolOrchestrator / custom tool registries.
+- Do not put domain logic in Supervisor; put it in specialized agents or `tools/`.
+
+---
+
+*End of session 2026-07-23 (Multi-Agent Architecture).*

@@ -1,0 +1,653 @@
+[
+  {
+    "id": "general_001",
+    "question": "Hello",
+    "expected_behavior": "greeting",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hello",
+      "gofo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_002",
+    "question": "Hi there",
+    "expected_behavior": "greeting",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hello",
+      "gofo"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_003",
+    "question": "What can you help me with?",
+    "expected_behavior": "capabilities",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "sop",
+      "analyze"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_004",
+    "question": "Who are you?",
+    "expected_behavior": "identity",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "gofo",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_005",
+    "question": "Thanks",
+    "expected_behavior": "chitchat",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "welcome",
+      "help"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_006",
+    "question": "What is last-mile logistics?",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "logistics"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_007",
+    "question": "Explain pickup rate in logistics",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_008",
+    "question": "How do hubs and drivers relate?",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_009",
+    "question": "Write a Python snippet to compute a rate",
+    "expected_behavior": "coding",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "python",
+      "rate"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_010",
+    "question": "Help me draft an ops standup agenda",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "agenda",
+      "ops"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_011",
+    "question": "Tell me about operational KPI number 1",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_012",
+    "question": "Tell me about operational KPI number 2",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_013",
+    "question": "Tell me about operational KPI number 3",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_014",
+    "question": "Tell me about operational KPI number 4",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_015",
+    "question": "Tell me about operational KPI number 5",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_016",
+    "question": "Tell me about operational KPI number 6",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_017",
+    "question": "Tell me about operational KPI number 7",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_018",
+    "question": "Tell me about operational KPI number 8",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_019",
+    "question": "Tell me about operational KPI number 9",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_020",
+    "question": "Tell me about operational KPI number 10",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_021",
+    "question": "Tell me about operational KPI number 11",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_022",
+    "question": "Tell me about operational KPI number 12",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_023",
+    "question": "Tell me about operational KPI number 13",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_024",
+    "question": "Tell me about operational KPI number 14",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_025",
+    "question": "Tell me about operational KPI number 15",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_026",
+    "question": "Tell me about operational KPI number 16",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_027",
+    "question": "Tell me about operational KPI number 17",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_028",
+    "question": "Tell me about operational KPI number 18",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_029",
+    "question": "Tell me about operational KPI number 19",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_030",
+    "question": "Tell me about operational KPI number 20",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_031",
+    "question": "Tell me about operational KPI number 21",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_032",
+    "question": "Tell me about operational KPI number 22",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_033",
+    "question": "Tell me about operational KPI number 23",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_034",
+    "question": "Tell me about operational KPI number 24",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_035",
+    "question": "Tell me about operational KPI number 25",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_036",
+    "question": "Tell me about operational KPI number 26",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_037",
+    "question": "Tell me about operational KPI number 27",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_038",
+    "question": "Tell me about operational KPI number 28",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_039",
+    "question": "Tell me about operational KPI number 29",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "kpi",
+      "operations"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "general_040",
+    "question": "Give a brief tip for improving hub productivity #40.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_041",
+    "question": "Give a brief tip for improving hub productivity #41.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_042",
+    "question": "Give a brief tip for improving hub productivity #42.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_043",
+    "question": "Give a brief tip for improving hub productivity #43.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_044",
+    "question": "Give a brief tip for improving hub productivity #44.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_045",
+    "question": "Give a brief tip for improving hub productivity #45.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_046",
+    "question": "Give a brief tip for improving hub productivity #46.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_047",
+    "question": "Give a brief tip for improving hub productivity #47.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_048",
+    "question": "Give a brief tip for improving hub productivity #48.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_049",
+    "question": "Give a brief tip for improving hub productivity #49.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  },
+  {
+    "id": "general_050",
+    "question": "Give a brief tip for improving hub productivity #50.",
+    "expected_behavior": "general_knowledge",
+    "expected_tools": [
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "productiv"
+    ],
+    "notes": "Synthetic general prompt"
+  }
+]

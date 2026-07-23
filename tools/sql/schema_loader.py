@@ -1,41 +1,42 @@
-"""Load SQLite schema metadata for SQL planning."""
+"""Load SQLite schema metadata for SQL planning.
+
+Prefer SchemaRegistry for structured metadata. This module keeps a text helper
+for backward-compatible callers/tests.
+"""
 
 from __future__ import annotations
 
-import sqlite3
 from functools import lru_cache
 
-import config
 from tools.sql.schema import SCHEMA
+from tools.sql.schema_registry import get_schema_registry
 
 
 @lru_cache(maxsize=1)
 def get_database_schema() -> str:
     """
-    Return live SQLite table and column metadata for planner prompts.
+    Return live SQLite table and column metadata as text.
 
-    If the configured database is unavailable, return the static documented
-    schema so tests and prompt construction remain usable.
+    Prefer SchemaRegistry + SchemaRetriever for planner prompts. This helper
+    remains for debug / legacy callers.
     """
-    database_path = config.SQLITE_DATABASE
-    if not database_path.exists():
-        return SCHEMA
-
-    connection = sqlite3.connect(str(database_path))
     try:
-        table_rows = connection.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;"
-        ).fetchall()
-        table_names = [str(row[0]) for row in table_rows]
+        snapshot = get_schema_registry().get_snapshot()
+        if not snapshot.tables:
+            return SCHEMA
         lines = ["Live SQLite schema", "------------------"]
-        for table_name in table_names:
-            columns = connection.execute(f"PRAGMA table_info({table_name});").fetchall()
+        for table_name in snapshot.table_names():
+            table = snapshot.tables[table_name]
             lines.append("")
             lines.append(f"TABLE {table_name}:")
-            for column in columns:
-                column_name = column[1]
-                column_type = column[2] or "TEXT"
-                lines.append(f"- {column_name} {column_type}")
+            for column in table.columns:
+                lines.append(f"- {column.name} {column.data_type}")
         return "\n".join(lines)
-    finally:
-        connection.close()
+    except Exception:  # noqa: BLE001
+        return SCHEMA
+
+
+def refresh_database_schema_cache() -> None:
+    """Clear text-schema cache after registry refresh."""
+    get_database_schema.cache_clear()
+    get_schema_registry().refresh()

@@ -100,9 +100,10 @@ def test_sql_analysis_uses_multi_step_template() -> None:
         _classification(IntentType.SQL_Analysis),
     )
     assert llm.calls == 0
-    assert len(plan.steps) >= 4
-    assert any(step.tool == ToolName.PYTHON for step in plan.steps)
+    # Minimum sources: SQL (+ optional RAG for explain). No Python unless calc/chart.
+    assert any(step.tool == ToolName.SQL for step in plan.steps)
     assert plan.steps[-1].tool == ToolName.LLM
+    assert ToolName.PYTHON not in [step.tool for step in plan.steps]
 
 
 def test_comparison_plan_is_multi_step() -> None:
@@ -110,7 +111,7 @@ def test_comparison_plan_is_multi_step() -> None:
         "Compare Chicago and New York performance this month",
         _classification(IntentType.SQL_Analysis),
     )
-    assert len(plan.steps) >= 3
+    assert len(plan.steps) >= 2
     assert any(step.tool == ToolName.SQL for step in plan.steps)
     assert plan.steps[-1].tool == ToolName.LLM
 
@@ -133,13 +134,14 @@ def test_follow_up_inherits_date_context_in_inputs() -> None:
         assert plan.requires_clarification is True
 
 
-def test_ranking_question_plans_sql_analysis() -> None:
+def test_ranking_question_plans_sql_without_python() -> None:
     plan = Planner().plan(
         "Which hub had the lowest pickup success rate last week?",
         _classification(IntentType.SQL_Analysis),
     )
     assert any(step.tool == ToolName.SQL for step in plan.steps)
-    assert any(step.tool == ToolName.PYTHON for step in plan.steps)
+    assert ToolName.PYTHON not in [step.tool for step in plan.steps]
+    assert plan.steps[-1].tool == ToolName.LLM
 
 
 def test_llm_planner_used_when_no_template(monkeypatch) -> None:
@@ -160,8 +162,12 @@ def test_llm_planner_used_when_no_template(monkeypatch) -> None:
         "clarification_question": None,
         "confidence": 0.7,
         "reasoning": "fallback",
+        "selected_data_sources": ["LLM"],
     }
     llm = _FakeLLM(payload)
+
+    # Force legacy LLM planner path by disabling data-source selection and templates.
+    monkeypatch.setattr("core.planner.config.DATA_SOURCE_SELECTION_ENABLED", False)
     monkeypatch.setattr("core.planner._template_plan", lambda *args, **kwargs: None)
     plan = Planner(llm=llm).plan(
         "obscure request xyz",

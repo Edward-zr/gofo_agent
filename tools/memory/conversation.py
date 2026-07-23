@@ -163,6 +163,8 @@ def _extract_metrics(entities: dict[str, Any], inferred_metric: str | None = Non
 
 def _infer_metric(question: str, response: QueryResponse) -> str | None:
     """Infer the active operational metric from planner metadata and text."""
+    if response.business_metric:
+        return str(response.business_metric)
     entities = response.planning_entities or {}
     if entities.get("metric"):
         return str(entities["metric"])

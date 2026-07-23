@@ -6,6 +6,11 @@ from time import perf_counter
 from typing import Any
 
 import config
+from core.clarification_manager import (
+    ClarificationManager,
+    PendingClarification,
+    build_clarification_response,
+)
 from core.error_handler import handle_error
 from core.intent_classifier import IntentClassifier, IntentClassification, IntentType
 from core.intent_router import IntentRouter, RouteIntent
@@ -65,6 +70,8 @@ class GOFOAgent:
             max_retries=config.REFLECTION_MAX_RETRIES,
             approve_confidence=config.QA_APPROVE_THRESHOLD,
         )
+        self.clarification_manager = ClarificationManager()
+        self.pending_clarification: PendingClarification | None = None
 
     def ask(self, question: str, attachment_ids: list[str] | None = None) -> dict[str, Any]:
         """Ask GOFO a question and return a dashboard-friendly response."""
@@ -144,6 +151,31 @@ class GOFOAgent:
                 and not route_decision["use_attachments"]
             ):
                 resolved_question = resolve(question, self.memory)
+
+            # Resume paused plan when the user answers a pending clarification.
+            resumed_from_clarification = False
+            clarification_slots: dict[str, str] = {}
+            if (
+                config.CLARIFICATION_MANAGER_ENABLED
+                and self.pending_clarification is not None
+                and not attachment_ids
+            ):
+                resume_decision = self.clarification_manager.apply_user_response(
+                    self.pending_clarification,
+                    question,
+                )
+                if resume_decision.resumed_question:
+                    resolved_question = resume_decision.resumed_question
+                    resumed_from_clarification = True
+                    clarification_slots = dict(resume_decision.filled_slots or {})
+                    # Persist filled slots into short-term memory for follow-ups.
+                    if clarification_slots.get("metric"):
+                        self.memory.global_state["current_metric"] = clarification_slots["metric"]
+                    if clarification_slots.get("date_range"):
+                        self.memory.global_state["date_range"] = clarification_slots["date_range"]
+                    self.pending_clarification = None
+                    logger.info("Resumed after clarification: %s", resolved_question)
+
             logger.info("Resolved question: %s", resolved_question)
             logger.info(
                 "Semantic analysis: domain=%s sub_intent=%s capability=%s confidence=%s",
@@ -170,15 +202,24 @@ class GOFOAgent:
             # Multi-step planner execution for analytical / dashboard / SOP-compare.
             # Attachments, wait-for-upload, and cache hits stay on RouteDispatcher.
             planner_intents = {
+                IntentType.SQL_Query,
                 IntentType.SQL_Analysis,
                 IntentType.Dashboard,
+                IntentType.SOP_QA,
+                IntentType.SOP_Summary,
                 IntentType.SOP_Compare,
+                IntentType.Follow_Up,
+                IntentType.Explain_Result,
+                IntentType.Unknown,
             }
             use_planner_pipeline = (
                 config.PLANNER_ENABLED
                 and config.INTENT_CLASSIFIER_ENABLED
                 and classification is not None
-                and classification.intent in planner_intents
+                and (
+                    classification.intent in planner_intents
+                    or resumed_from_clarification
+                )
                 and route_decision["intent"]
                 not in {
                     RouteIntent.WAIT_FOR_UPLOAD,
@@ -199,31 +240,69 @@ class GOFOAgent:
                         "use_attachments": route_decision["use_attachments"],
                     },
                 )
-                execution = self.plan_executor.execute(
-                    plan,
-                    question=question,
-                    resolved_question=resolved_question,
-                    conversation_memory=self.memory,
-                    attachment_contexts=attachment_contexts,
-                    file_context=file_context,
-                    attachment_ids=attachment_ids,
-                    stored_attachments=self.attachment_memory.get_active_stored()
-                    or list(self.attachment_memory.stored_attachments.values()),
-                    previous_filter=self.attachment_memory.active_filters or None,
-                    last_entity=(last_analysis.get("last_entity") or None),
-                    result_context=result_context,
-                )
-                response = execution.response
-                response.intent_classification = classification.model_dump()
-                response.execution_plan = plan.model_dump()
-                response.step_results_summary = execution.response.step_results_summary
-                if response.capability == "sql" and response.sql_rows:
-                    from tools.analyzer.business_reasoner import analyze_business_response
 
-                    response = analyze_business_response(response, resolved_question)
+                # Clarification Manager: ask before Tool Orchestration when needed.
+                if config.CLARIFICATION_MANAGER_ENABLED and not resumed_from_clarification:
+                    clarify = self.clarification_manager.evaluate(
+                        question,
+                        resolved_question=resolved_question,
+                        classification=classification,
+                        plan=plan,
+                        conversation_memory=self.memory,
+                        attachment_context={
+                            "attachment_ids": attachment_ids,
+                            "filenames": [ctx.filename for ctx in attachment_contexts],
+                            "use_attachments": route_decision["use_attachments"],
+                        },
+                    )
+                    if clarify.needs_clarification and clarify.pending is not None:
+                        self.pending_clarification = clarify.pending
+                        response = build_clarification_response(
+                            clarify,
+                            question=question,
+                            classification=classification,
+                        )
+                        response.execution_plan = plan.model_dump()
+                        response.resolved_question = resolved_question
+                        # Skip tool execution / QA; fall through to memory update.
+                        quality_report = None
+                        reflection_result = None
+                        qa_retry_count = 0
+                        reflection_retry_count = 0
+                        # Jump to shared response finalization by using a flag.
+                        skip_tools = True
+                    else:
+                        skip_tools = False
+                else:
+                    skip_tools = False
+
+                if not skip_tools:
+                    execution = self.plan_executor.execute(
+                        plan,
+                        question=question,
+                        resolved_question=resolved_question,
+                        conversation_memory=self.memory,
+                        attachment_contexts=attachment_contexts,
+                        file_context=file_context,
+                        attachment_ids=attachment_ids,
+                        stored_attachments=self.attachment_memory.get_active_stored()
+                        or list(self.attachment_memory.stored_attachments.values()),
+                        previous_filter=self.attachment_memory.active_filters or None,
+                        last_entity=(last_analysis.get("last_entity") or None),
+                        result_context=result_context,
+                    )
+                    response = execution.response
                     response.intent_classification = classification.model_dump()
                     response.execution_plan = plan.model_dump()
+                    response.step_results_summary = execution.response.step_results_summary
+                    if response.capability == "sql" and response.sql_rows:
+                        from tools.analyzer.business_reasoner import analyze_business_response
+
+                        response = analyze_business_response(response, resolved_question)
+                        response.intent_classification = classification.model_dump()
+                        response.execution_plan = plan.model_dump()
             else:
+                skip_tools = False
                 response = self.route_dispatcher.dispatch(
                     DispatchContext(
                         question=question,
@@ -248,59 +327,83 @@ class GOFOAgent:
                 if classification is not None:
                     response.intent_classification = classification.model_dump()
 
-            quality_report: QualityReport | None = None
-            reflection_result: ReflectionResult | None = None
-            qa_retry_count = 0
-            reflection_retry_count = 0
+            if not skip_tools:
+                quality_report: QualityReport | None = None
+                reflection_result: ReflectionResult | None = None
+                qa_retry_count = 0
+                reflection_retry_count = 0
 
-            # Reflection is the primary critic. It uses QA validators underneath and
-            # sends structured feedback to the Planner (never executes tools itself).
-            if config.REFLECTION_ENABLED and _should_run_qa(response, route_decision):
-                reflection_result, response, reflection_retry_count = self._run_reflection(
-                    question=question,
-                    resolved_question=resolved_question,
-                    response=response,
-                    classification=classification,
-                    attachment_contexts=attachment_contexts,
-                    file_context=file_context,
-                    attachment_ids=attachment_ids,
-                    result_context=result_context,
-                    last_analysis=last_analysis,
-                )
-                response.reflection_result = reflection_result.model_dump()
-                response.reflection_retry_count = reflection_retry_count
-                if reflection_result.quality_report:
-                    response.quality_report = reflection_result.quality_report
-                    response.qa_retry_count = reflection_retry_count
-                if reflection_result.should_ask_user:
-                    response.answer = (
-                        reflection_result.clarification_question
-                        or _qa_clarification_message_from_reflection(reflection_result)
+                # Reflection is the primary critic. It uses QA validators underneath and
+                # sends structured feedback to the Planner (never executes tools itself).
+                if config.REFLECTION_ENABLED and _should_run_qa(response, route_decision):
+                    reflection_result, response, reflection_retry_count = self._run_reflection(
+                        question=question,
+                        resolved_question=resolved_question,
+                        response=response,
+                        classification=classification,
+                        attachment_contexts=attachment_contexts,
+                        file_context=file_context,
+                        attachment_ids=attachment_ids,
+                        result_context=result_context,
+                        last_analysis=last_analysis,
                     )
-                    response.capability = "clarification"
-            elif config.QUALITY_ASSURANCE_ENABLED and _should_run_qa(response, route_decision):
-                quality_report, response, qa_retry_count = self._run_quality_assurance(
-                    question=question,
-                    resolved_question=resolved_question,
-                    response=response,
-                    classification=classification,
-                    attachment_contexts=attachment_contexts,
-                    file_context=file_context,
-                    attachment_ids=attachment_ids,
-                    result_context=result_context,
-                    last_analysis=last_analysis,
-                    route_decision=route_decision,
-                )
-                if quality_report is not None:
+                    response.reflection_result = reflection_result.model_dump()
+                    response.reflection_retry_count = reflection_retry_count
+                    if reflection_result.quality_report:
+                        response.quality_report = reflection_result.quality_report
+                        response.qa_retry_count = reflection_retry_count
+                    if reflection_result.should_ask_user:
+                        response.answer = (
+                            reflection_result.clarification_question
+                            or _qa_clarification_message_from_reflection(reflection_result)
+                        )
+                        response.capability = "clarification"
+                        # Store pending from reflection ask-user so the next turn can resume.
+                        if config.CLARIFICATION_MANAGER_ENABLED and self.pending_clarification is None:
+                            self.pending_clarification = PendingClarification(
+                                original_question=question,
+                                missing_fields=["date_range"],
+                                pending_question=response.answer or "",
+                                options=[],
+                                reason="Reflection requested user clarification.",
+                                ambiguity_type="reflection",
+                                classification=(
+                                    classification.model_dump() if classification else None
+                                ),
+                                draft_plan=response.execution_plan,
+                                resolved_base=resolved_question,
+                            )
+                elif config.QUALITY_ASSURANCE_ENABLED and _should_run_qa(response, route_decision):
+                    quality_report, response, qa_retry_count = self._run_quality_assurance(
+                        question=question,
+                        resolved_question=resolved_question,
+                        response=response,
+                        classification=classification,
+                        attachment_contexts=attachment_contexts,
+                        file_context=file_context,
+                        attachment_ids=attachment_ids,
+                        result_context=result_context,
+                        last_analysis=last_analysis,
+                    )
                     response.quality_report = quality_report.model_dump()
                     response.qa_retry_count = qa_retry_count
-                    if quality_report.should_ask_user and quality_report.action.value == "ask_user":
+                    if quality_report.should_ask_user:
                         response.answer = _qa_clarification_message(quality_report)
                         response.capability = "clarification"
 
             logger.info("Selected capability: %s", response.capability)
             if response.generated_sql:
                 logger.info("Generated SQL: %s", response.generated_sql)
+
+            # Keep clarification-filled slots on the response so memory.add_turn
+            # does not overwrite them with heuristic inference.
+            if clarification_slots.get("metric"):
+                response.business_metric = clarification_slots["metric"]
+                entities = dict(response.planning_entities or {})
+                entities["metric"] = clarification_slots["metric"]
+                response.planning_entities = entities
+            if clarification_slots.get("date_range"):
+                response.date_range = clarification_slots["date_range"]
 
             self.memory.add_turn(
                 user_question=question,
@@ -384,6 +487,10 @@ class GOFOAgent:
                 response.memory_current_state["quality_report"] = response.quality_report
             if response.reflection_result:
                 response.memory_current_state["reflection_result"] = response.reflection_result
+            if self.pending_clarification is not None:
+                response.memory_current_state["pending_clarification"] = (
+                    self.pending_clarification.model_dump()
+                )
             response.last_result_context = self.memory.get_current_state().get("last_result_context")
             return format_agent_response(response)
         except Exception as exc:
@@ -685,6 +792,11 @@ def format_agent_response(response: QueryResponse) -> dict[str, Any]:
             "reflection_result": response.reflection_result or {},
             "reflection_retry_count": response.reflection_retry_count or 0,
             "agent_state": response.agent_state or {},
+            "requires_clarification": bool(response.requires_clarification)
+            or response.capability == "clarification",
+            "clarification_question": response.clarification_question,
+            "clarification_options": response.clarification_options or [],
+            "missing_fields": response.missing_fields or [],
         },
         "charts": response.charts or [],
         "recommendations": _merge_recommendations(response),

@@ -293,3 +293,71 @@ class QueryResponse(BaseModel):
         default=None,
         description="Orchestrator AgentState snapshot (sql/docs/python/charts/log).",
     )
+    retrieved_schema: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Schema subset retrieved for SQL generation (tables/columns/joins).",
+    )
+    candidate_tables: Optional[list[str]] = Field(
+        default=None,
+        description="Candidate tables considered by the Schema Retriever.",
+    )
+    candidate_columns: Optional[dict[str, list[str]]] = Field(
+        default=None,
+        description="Candidate columns considered by the Schema Retriever.",
+    )
+    requires_clarification: Optional[bool] = Field(
+        default=None,
+        description="Whether the agent is waiting on user clarification.",
+    )
+    clarification_question: Optional[str] = Field(
+        default=None,
+        description="Clarification prompt shown to the user.",
+    )
+    clarification_options: Optional[list[dict[str, Any]]] = Field(
+        default=None,
+        description="Multiple-choice clarification options when available.",
+    )
+    missing_fields: Optional[list[str]] = Field(
+        default=None,
+        description="Business parameters missing before tool execution.",
+    )
+    retrieval_confidence: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Full Adaptive Retrieval Confidence Engine payload.",
+    )
+    confidence_score: Optional[float] = Field(
+        default=None,
+        description="Overall adaptive retrieval confidence score (0–1).",
+    )
+    confidence_level: Optional[str] = Field(
+        default=None,
+        description="HIGH | MEDIUM | LOW retrieval confidence level.",
+    )
+    confidence_breakdown: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Per-signal retrieval confidence breakdown.",
+    )
+    similarity_scores: Optional[list[float]] = Field(
+        default=None,
+        description="Per-chunk similarity / relevance scores from retrieval.",
+    )
+    retrieved_chunk_count: Optional[int] = Field(
+        default=None,
+        description="Number of chunks returned by the retriever.",
+    )
+    retrieved_sources: Optional[list[str]] = Field(
+        default=None,
+        description="Distinct source documents supporting the answer.",
+    )
+    confidence_reason: Optional[str] = Field(
+        default=None,
+        description="Human-readable reason for the retrieval confidence level.",
+    )
+    fallback_strategy: Optional[str] = Field(
+        default=None,
+        description="Decision Engine strategy (GENERATE_*, CLARIFY, DOCUMENT_REQUEST, ...).",
+    )
+    retrieval_policy: Optional[dict[str, Any]] = Field(
+        default=None,
+        description="Planner retrieval policy applied by the Confidence Engine.",
+    )

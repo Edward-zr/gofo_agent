@@ -1,0 +1,21 @@
+family: rag
+prompts:
+  retrieval_prompt:
+    active: v1
+    versions:
+      v1:
+        file: retrieval_prompt_v1.md
+  generator_prompt:
+    active: v1
+    candidates:
+    - v2
+    versions:
+      v1:
+        file: generator_prompt_v1.md
+      v2:
+        file: generator_prompt_v2.md
+  confidence_prompt:
+    active: v1
+    versions:
+      v1:
+        file: confidence_prompt_v1.md

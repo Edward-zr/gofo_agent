@@ -1,0 +1,2802 @@
+[
+  {
+    "id": "sop_001",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_002",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_003",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_004",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_005",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_006",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_007",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_008",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_009",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_010",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_011",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_012",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_013",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_014",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_015",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_016",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_017",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_018",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_019",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_020",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_021",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_022",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_023",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_024",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_025",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_026",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_027",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_028",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_029",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_030",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_031",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_032",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_033",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_034",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_035",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_036",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_037",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_038",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_039",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_040",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_041",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_042",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_043",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_044",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_045",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_046",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_047",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_048",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_049",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_050",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_051",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_052",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_053",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_054",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_055",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_056",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_057",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_058",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_059",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_060",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_061",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_062",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_063",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_064",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_065",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_066",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_067",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_068",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_069",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_070",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_071",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_072",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_073",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_074",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_075",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_076",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_077",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_078",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_079",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_080",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_081",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_082",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_083",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_084",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_085",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_086",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_087",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_088",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_089",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_090",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_091",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_092",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_093",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_094",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_095",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_096",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_097",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_098",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_099",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_100",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_101",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_102",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_103",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_104",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_105",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_106",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_107",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_108",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_109",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_110",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_111",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_112",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_113",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_114",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_115",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_116",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_117",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_118",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_119",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_120",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_121",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_122",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_123",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_124",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_125",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_126",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_127",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_128",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_129",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_130",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_131",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_132",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_133",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_134",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_135",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_136",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_137",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_138",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_139",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_140",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_141",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_142",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_143",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_144",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_145",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_146",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_147",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_148",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_149",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_150",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_151",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_152",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_153",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_154",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_155",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_156",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_157",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_158",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_159",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_160",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_161",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_162",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_163",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_164",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_165",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_166",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_167",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_168",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_169",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_170",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_171",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_172",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_173",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_174",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_175",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_176",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_177",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_178",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_179",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_180",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_181",
+    "question": "What is the SOP for returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_182",
+    "question": "How should a driver handle pickup issues?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_183",
+    "question": "Summarize the delivery policy.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_184",
+    "question": "What are the required steps for safety?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_185",
+    "question": "When should we escalate a escalation problem?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_186",
+    "question": "What documentation is required for scanning?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_187",
+    "question": "Explain the exception process related to customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_188",
+    "question": "What are the SLAs for vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_189",
+    "question": "Who owns the warehouse process according to SOP?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_190",
+    "question": "List the key checkpoints in the training workflow.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  },
+  {
+    "id": "sop_191",
+    "question": "What safety rules apply during returns?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "returns",
+      "return"
+    ],
+    "notes": "SOP topic=returns"
+  },
+  {
+    "id": "sop_192",
+    "question": "How do I verify completion for pickup?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "pickup"
+    ],
+    "notes": "SOP topic=pickup"
+  },
+  {
+    "id": "sop_193",
+    "question": "What is the customer communication policy for delivery?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "delivery",
+      "delivery"
+    ],
+    "notes": "SOP topic=delivery"
+  },
+  {
+    "id": "sop_194",
+    "question": "Compare standard vs exception handling for safety.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "safety",
+      "safety"
+    ],
+    "notes": "SOP topic=safety"
+  },
+  {
+    "id": "sop_195",
+    "question": "What tools are used during escalation operations?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "escalation",
+      "escalate"
+    ],
+    "notes": "SOP topic=escalation"
+  },
+  {
+    "id": "sop_196",
+    "question": "What happens if scanning fails the first attempt?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "scanning",
+      "scan"
+    ],
+    "notes": "SOP topic=scanning"
+  },
+  {
+    "id": "sop_197",
+    "question": "Provide the manager checklist for customer service.",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "customer"
+    ],
+    "notes": "SOP topic=customer_service"
+  },
+  {
+    "id": "sop_198",
+    "question": "What training is required before performing vehicle?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "vehicle",
+      "vehicle"
+    ],
+    "notes": "SOP topic=vehicle"
+  },
+  {
+    "id": "sop_199",
+    "question": "Which forms must be filled for warehouse?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "warehouse",
+      "warehouse"
+    ],
+    "notes": "SOP topic=warehouse"
+  },
+  {
+    "id": "sop_200",
+    "question": "How is quality audited for training?",
+    "expected_behavior": "rag_sop_answer",
+    "expected_tools": [
+      "RAG",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "training",
+      "training"
+    ],
+    "notes": "SOP topic=training"
+  }
+]

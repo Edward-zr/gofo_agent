@@ -1,0 +1,7 @@
+family: clarification
+prompts:
+  clarification_prompt:
+    active: v1
+    versions:
+      v1:
+        file: clarification_prompt_v1.md

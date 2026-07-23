@@ -73,7 +73,29 @@ class AgentState(BaseModel):
     resolved_question: str = ""
     sql_results: list[dict[str, Any]] = Field(default_factory=list)
     sql_queries: list[str] = Field(default_factory=list)
+    retrieved_schema: dict[str, Any] | None = None
+    candidate_tables: list[str] = Field(default_factory=list)
+    candidate_columns: dict[str, list[str]] = Field(default_factory=dict)
+    dataframe: Any | None = None
+    transformed_dataframe: Any | None = None
+    statistics: dict[str, Any] = Field(default_factory=dict)
+    chart_metadata: list[dict[str, Any]] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
+    original_question: str = ""
+    missing_fields: list[str] = Field(default_factory=list)
+    pending_question: str | None = None
+    user_response: str | None = None
     documents: list[dict[str, Any]] = Field(default_factory=list)
+    retrieval_confidence: dict[str, Any] | None = None
+    confidence_score: float | None = None
+    confidence_level: str | None = None
+    confidence_breakdown: dict[str, Any] | None = None
+    similarity_scores: list[float] = Field(default_factory=list)
+    retrieved_chunk_count: int = 0
+    retrieved_sources: list[str] = Field(default_factory=list)
+    confidence_reason: str | None = None
+    fallback_strategy: str | None = None
+    retrieval_policy: dict[str, Any] | None = None
     python_results: list[dict[str, Any]] = Field(default_factory=list)
     charts: list[dict[str, Any]] = Field(default_factory=list)
     intermediate_results: dict[int, dict[str, Any]] = Field(default_factory=dict)
@@ -183,6 +205,13 @@ def _update_agent_state(context: ExecutionContext, step: ExecutionStep, output: 
         context.sql_results = list(state.sql_results)
     if output.get("sql"):
         state.sql_queries.append(str(output["sql"]))
+    if output.get("retrieved_schema") is not None:
+        state.retrieved_schema = output["retrieved_schema"]
+        context.metadata["retrieved_schema"] = output["retrieved_schema"]
+    if output.get("candidate_tables") is not None:
+        state.candidate_tables = list(output["candidate_tables"] or [])
+    if output.get("candidate_columns") is not None:
+        state.candidate_columns = dict(output["candidate_columns"] or {})
     if output.get("sources"):
         state.documents.extend(output["sources"])
         context.retrieved_documents = list(state.documents)
@@ -193,20 +222,72 @@ def _update_agent_state(context: ExecutionContext, step: ExecutionStep, output: 
             elif isinstance(chunk, dict):
                 state.documents.append(chunk)
         context.retrieved_documents = list(state.documents)
-    if output.get("summary") or output.get("tool") == ToolName.PYTHON.value:
+    if output.get("retrieval_confidence") is not None or output.get("confidence_level"):
+        if output.get("retrieval_confidence") is not None:
+            state.retrieval_confidence = output.get("retrieval_confidence")
+        if output.get("confidence_score") is not None:
+            state.confidence_score = output.get("confidence_score")
+        if output.get("confidence_level") is not None:
+            state.confidence_level = output.get("confidence_level")
+        if output.get("confidence_breakdown") is not None:
+            state.confidence_breakdown = output.get("confidence_breakdown")
+        if output.get("similarity_scores") is not None:
+            state.similarity_scores = list(output.get("similarity_scores") or [])
+        if output.get("retrieved_chunk_count") is not None:
+            state.retrieved_chunk_count = int(output.get("retrieved_chunk_count") or 0)
+        if output.get("retrieved_sources") is not None:
+            state.retrieved_sources = list(output.get("retrieved_sources") or [])
+        if output.get("confidence_reason") is not None:
+            state.confidence_reason = output.get("confidence_reason")
+        if output.get("fallback_strategy") is not None:
+            state.fallback_strategy = output.get("fallback_strategy")
+        if output.get("retrieval_policy") is not None:
+            state.retrieval_policy = output.get("retrieval_policy")
+        context.metadata["retrieval_confidence"] = state.retrieval_confidence
+        context.metadata["fallback_strategy"] = state.fallback_strategy
+    if output.get("summary") or output.get("tool") in {
+        ToolName.PYTHON.value,
+        ToolName.STATISTICS.value,
+        ToolName.TRANSFORM.value,
+    }:
         state.python_results.append(
             {
                 "step": step.step_number,
-                "summary": output.get("summary"),
+                "tool": output.get("tool"),
+                "summary": output.get("summary") or output.get("statistics"),
+                "functions_executed": output.get("functions_executed") or [],
                 "rows": output.get("rows") or [],
             }
         )
         context.python_results = list(state.python_results)
+    if output.get("dataframe") is not None:
+        state.dataframe = output.get("dataframe")
+    if output.get("transformed_dataframe") is not None:
+        state.transformed_dataframe = output.get("transformed_dataframe")
+    if output.get("statistics"):
+        state.statistics = dict(output.get("statistics") or {})
+    if output.get("chart_metadata"):
+        state.chart_metadata = list(output.get("chart_metadata") or [])
+    if output.get("recommendations"):
+        state.recommendations = list(output.get("recommendations") or [])
     if output.get("charts"):
         state.charts.extend(output["charts"])
         context.generated_charts = list(state.charts)
+        if not state.chart_metadata:
+            state.chart_metadata = [
+                {
+                    "type": chart.get("type"),
+                    "title": chart.get("title"),
+                    "format": chart.get("format", "png"),
+                }
+                for chart in output["charts"]
+            ]
     if output.get("answer"):
         state.answers.append(str(output["answer"]))
+    if output.get("facts") or output.get("tool") == ToolName.KNOWLEDGE_GRAPH.value:
+        state.metadata.setdefault("knowledge_graph_facts", [])
+        if isinstance(state.metadata["knowledge_graph_facts"], list):
+            state.metadata["knowledge_graph_facts"].extend(output.get("facts") or [])
 
 
 def _log_step(result: ExecutionResult) -> None:
@@ -619,6 +700,16 @@ class ToolOrchestrator:
             execution_plan=plan.model_dump(),
             step_results_summary=step_summary,
             agent_state=context.agent_state.model_dump(),
+            retrieval_confidence=context.agent_state.retrieval_confidence,
+            confidence_score=context.agent_state.confidence_score,
+            confidence_level=context.agent_state.confidence_level,
+            confidence_breakdown=context.agent_state.confidence_breakdown,
+            similarity_scores=list(context.agent_state.similarity_scores or []) or None,
+            retrieved_chunk_count=context.agent_state.retrieved_chunk_count or None,
+            retrieved_sources=list(context.agent_state.retrieved_sources or []) or None,
+            confidence_reason=context.agent_state.confidence_reason,
+            fallback_strategy=context.agent_state.fallback_strategy,
+            retrieval_policy=context.agent_state.retrieval_policy or plan.retrieval_policy,
         )
 
 
@@ -658,10 +749,14 @@ def build_default_registry() -> ToolRegistry:
     registry = ToolRegistry()
     mapping = {
         ToolName.SQL.value: pe._handle_sql,
+        ToolName.KNOWLEDGE_GRAPH.value: pe._handle_knowledge_graph,
         ToolName.RAG.value: pe._handle_rag,
         ToolName.MEMORY.value: pe._handle_memory,
+        ToolName.TRANSFORM.value: pe._handle_transform,
+        ToolName.STATISTICS.value: pe._handle_statistics,
         ToolName.PYTHON.value: pe._handle_python,
         ToolName.VISUALIZATION.value: pe._handle_visualization,
+        ToolName.RECOMMENDATION.value: pe._handle_recommendation,
         ToolName.ATTACHMENT.value: pe._handle_attachment,
         ToolName.LLM.value: pe._handle_llm,
         # Aliases for future / planner naming
@@ -670,10 +765,13 @@ def build_default_registry() -> ToolRegistry:
         "GENERATOR": pe._handle_llm,
         "CHART_GENERATOR": pe._handle_visualization,
         "PYTHON_ANALYTICS": pe._handle_python,
+        "PYTHON_TRANSFORM": pe._handle_transform,
+        "PYTHON_STATISTICS": pe._handle_statistics,
         "RAG_RETRIEVER": pe._handle_rag,
+        "KG": pe._handle_knowledge_graph,
+        "KNOWLEDGEGRAPH": pe._handle_knowledge_graph,
         "QA": _qa_noop_handler,
         "QUALITY_ASSURANCE": _qa_noop_handler,
-        "RECOMMENDATION": pe._handle_llm,
     }
     for name, handler in mapping.items():
         registry.register(name, _wrap_legacy_handler(handler))

@@ -1,0 +1,1392 @@
+[
+  {
+    "id": "sql_001",
+    "question": "Show the best driver.",
+    "expected_behavior": "clarification_metric",
+    "expected_tools": [],
+    "expected_answer_keywords": [
+      "metric"
+    ],
+    "notes": "Ambiguous prompt should clarify before tools when Clarification Manager is enabled."
+  },
+  {
+    "id": "sql_002",
+    "question": "Show performance.",
+    "expected_behavior": "clarification_scope",
+    "expected_tools": [],
+    "expected_answer_keywords": [
+      "hub",
+      "driver",
+      "region"
+    ],
+    "notes": "Ambiguous prompt should clarify before tools when Clarification Manager is enabled."
+  },
+  {
+    "id": "sql_003",
+    "question": "Compare pickup rates.",
+    "expected_behavior": "clarification_periods",
+    "expected_tools": [],
+    "expected_answer_keywords": [
+      "today",
+      "week",
+      "month"
+    ],
+    "notes": "Ambiguous prompt should clarify before tools when Clarification Manager is enabled."
+  },
+  {
+    "id": "sql_004",
+    "question": "Show top customers.",
+    "expected_behavior": "clarification_customer_metric",
+    "expected_tools": [],
+    "expected_answer_keywords": [
+      "volume",
+      "revenue",
+      "pickup"
+    ],
+    "notes": "Ambiguous prompt should clarify before tools when Clarification Manager is enabled."
+  },
+  {
+    "id": "sql_005",
+    "question": "Show pickup rate today.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=today"
+  },
+  {
+    "id": "sql_006",
+    "question": "What is the completed pickups yesterday?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=yesterday"
+  },
+  {
+    "id": "sql_007",
+    "question": "Rank hubs by on-time rate this week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=this week"
+  },
+  {
+    "id": "sql_008",
+    "question": "Rank drivers by failure rate last week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=last week"
+  },
+  {
+    "id": "sql_009",
+    "question": "Compare package volume this month vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=this month"
+  },
+  {
+    "id": "sql_010",
+    "question": "Which hub has the worst driver performance in Chicago?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=in Chicago"
+  },
+  {
+    "id": "sql_011",
+    "question": "Which driver has the best hub performance in Los Angeles?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_012",
+    "question": "Break down customer volume for Atlanta Hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_013",
+    "question": "Show pickup rate by driver.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=by driver"
+  },
+  {
+    "id": "sql_014",
+    "question": "What is the completed pickups by hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=by hub"
+  },
+  {
+    "id": "sql_015",
+    "question": "Rank hubs by on-time rate by region.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=by region"
+  },
+  {
+    "id": "sql_016",
+    "question": "Rank drivers by failure rate today.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=today"
+  },
+  {
+    "id": "sql_017",
+    "question": "Compare package volume yesterday vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=yesterday"
+  },
+  {
+    "id": "sql_018",
+    "question": "Which hub has the worst driver performance this week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=this week"
+  },
+  {
+    "id": "sql_019",
+    "question": "Which driver has the best hub performance last week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=last week"
+  },
+  {
+    "id": "sql_020",
+    "question": "Break down customer volume this month.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=this month"
+  },
+  {
+    "id": "sql_021",
+    "question": "Show pickup rate in Chicago.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=in Chicago"
+  },
+  {
+    "id": "sql_022",
+    "question": "What is the completed pickups in Los Angeles?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_023",
+    "question": "Rank hubs by on-time rate for Atlanta Hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_024",
+    "question": "Rank drivers by failure rate by driver.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=by driver"
+  },
+  {
+    "id": "sql_025",
+    "question": "Compare package volume by hub vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=by hub"
+  },
+  {
+    "id": "sql_026",
+    "question": "Which hub has the worst driver performance by region?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=by region"
+  },
+  {
+    "id": "sql_027",
+    "question": "Which driver has the best hub performance today?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=today"
+  },
+  {
+    "id": "sql_028",
+    "question": "Break down customer volume yesterday.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=yesterday"
+  },
+  {
+    "id": "sql_029",
+    "question": "Show pickup rate this week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=this week"
+  },
+  {
+    "id": "sql_030",
+    "question": "What is the completed pickups last week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=last week"
+  },
+  {
+    "id": "sql_031",
+    "question": "Rank hubs by on-time rate this month.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=this month"
+  },
+  {
+    "id": "sql_032",
+    "question": "Rank drivers by failure rate in Chicago.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=in Chicago"
+  },
+  {
+    "id": "sql_033",
+    "question": "Compare package volume in Los Angeles vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_034",
+    "question": "Which hub has the worst driver performance for Atlanta Hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_035",
+    "question": "Which driver has the best hub performance by driver?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=by driver"
+  },
+  {
+    "id": "sql_036",
+    "question": "Break down customer volume by hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=by hub"
+  },
+  {
+    "id": "sql_037",
+    "question": "Show pickup rate by region.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=by region"
+  },
+  {
+    "id": "sql_038",
+    "question": "What is the completed pickups today?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=today"
+  },
+  {
+    "id": "sql_039",
+    "question": "Rank hubs by on-time rate yesterday.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=yesterday"
+  },
+  {
+    "id": "sql_040",
+    "question": "Rank drivers by failure rate this week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=this week"
+  },
+  {
+    "id": "sql_041",
+    "question": "Compare package volume last week vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=last week"
+  },
+  {
+    "id": "sql_042",
+    "question": "Which hub has the worst driver performance this month?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=this month"
+  },
+  {
+    "id": "sql_043",
+    "question": "Which driver has the best hub performance in Chicago?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=in Chicago"
+  },
+  {
+    "id": "sql_044",
+    "question": "Break down customer volume in Los Angeles.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_045",
+    "question": "Show pickup rate for Atlanta Hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_046",
+    "question": "What is the completed pickups by driver?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=by driver"
+  },
+  {
+    "id": "sql_047",
+    "question": "Rank hubs by on-time rate by hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=by hub"
+  },
+  {
+    "id": "sql_048",
+    "question": "Rank drivers by failure rate by region.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=by region"
+  },
+  {
+    "id": "sql_049",
+    "question": "Compare package volume today vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=today"
+  },
+  {
+    "id": "sql_050",
+    "question": "Which hub has the worst driver performance yesterday?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=yesterday"
+  },
+  {
+    "id": "sql_051",
+    "question": "Which driver has the best hub performance this week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=this week"
+  },
+  {
+    "id": "sql_052",
+    "question": "Break down customer volume last week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=last week"
+  },
+  {
+    "id": "sql_053",
+    "question": "Show pickup rate this month.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=this month"
+  },
+  {
+    "id": "sql_054",
+    "question": "What is the completed pickups in Chicago?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=in Chicago"
+  },
+  {
+    "id": "sql_055",
+    "question": "Rank hubs by on-time rate in Los Angeles.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_056",
+    "question": "Rank drivers by failure rate for Atlanta Hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_057",
+    "question": "Compare package volume by driver vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=by driver"
+  },
+  {
+    "id": "sql_058",
+    "question": "Which hub has the worst driver performance by hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=by hub"
+  },
+  {
+    "id": "sql_059",
+    "question": "Which driver has the best hub performance by region?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=by region"
+  },
+  {
+    "id": "sql_060",
+    "question": "Break down customer volume today.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=today"
+  },
+  {
+    "id": "sql_061",
+    "question": "Show pickup rate yesterday.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=yesterday"
+  },
+  {
+    "id": "sql_062",
+    "question": "What is the completed pickups this week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=this week"
+  },
+  {
+    "id": "sql_063",
+    "question": "Rank hubs by on-time rate last week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=last week"
+  },
+  {
+    "id": "sql_064",
+    "question": "Rank drivers by failure rate this month.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=this month"
+  },
+  {
+    "id": "sql_065",
+    "question": "Compare package volume in Chicago vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=in Chicago"
+  },
+  {
+    "id": "sql_066",
+    "question": "Which hub has the worst driver performance in Los Angeles?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_067",
+    "question": "Which driver has the best hub performance for Atlanta Hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_068",
+    "question": "Break down customer volume by driver.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=by driver"
+  },
+  {
+    "id": "sql_069",
+    "question": "Show pickup rate by hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=by hub"
+  },
+  {
+    "id": "sql_070",
+    "question": "What is the completed pickups by region?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=by region"
+  },
+  {
+    "id": "sql_071",
+    "question": "Rank hubs by on-time rate today.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=today"
+  },
+  {
+    "id": "sql_072",
+    "question": "Rank drivers by failure rate yesterday.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=yesterday"
+  },
+  {
+    "id": "sql_073",
+    "question": "Compare package volume this week vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=this week"
+  },
+  {
+    "id": "sql_074",
+    "question": "Which hub has the worst driver performance last week?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=last week"
+  },
+  {
+    "id": "sql_075",
+    "question": "Which driver has the best hub performance this month?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=this month"
+  },
+  {
+    "id": "sql_076",
+    "question": "Break down customer volume in Chicago.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=in Chicago"
+  },
+  {
+    "id": "sql_077",
+    "question": "Show pickup rate in Los Angeles.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_078",
+    "question": "What is the completed pickups for Atlanta Hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_079",
+    "question": "Rank hubs by on-time rate by driver.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=by driver"
+  },
+  {
+    "id": "sql_080",
+    "question": "Rank drivers by failure rate by hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=by hub"
+  },
+  {
+    "id": "sql_081",
+    "question": "Compare package volume by region vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=by region"
+  },
+  {
+    "id": "sql_082",
+    "question": "Which hub has the worst driver performance today?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=today"
+  },
+  {
+    "id": "sql_083",
+    "question": "Which driver has the best hub performance yesterday?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=yesterday"
+  },
+  {
+    "id": "sql_084",
+    "question": "Break down customer volume this week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=this week"
+  },
+  {
+    "id": "sql_085",
+    "question": "Show pickup rate last week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=last week"
+  },
+  {
+    "id": "sql_086",
+    "question": "What is the completed pickups this month?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=this month"
+  },
+  {
+    "id": "sql_087",
+    "question": "Rank hubs by on-time rate in Chicago.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=in Chicago"
+  },
+  {
+    "id": "sql_088",
+    "question": "Rank drivers by failure rate in Los Angeles.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_089",
+    "question": "Compare package volume for Atlanta Hub vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=for Atlanta Hub"
+  },
+  {
+    "id": "sql_090",
+    "question": "Which hub has the worst driver performance by driver?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=by driver"
+  },
+  {
+    "id": "sql_091",
+    "question": "Which driver has the best hub performance by hub?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=by hub"
+  },
+  {
+    "id": "sql_092",
+    "question": "Break down customer volume by region.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=by region"
+  },
+  {
+    "id": "sql_093",
+    "question": "Show pickup rate today.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "pickup",
+      "rate"
+    ],
+    "notes": "metric=pickup rate; scope=today"
+  },
+  {
+    "id": "sql_094",
+    "question": "What is the completed pickups yesterday?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "completed",
+      "pickup"
+    ],
+    "notes": "metric=completed pickups; scope=yesterday"
+  },
+  {
+    "id": "sql_095",
+    "question": "Rank hubs by on-time rate this week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "on-time",
+      "rate"
+    ],
+    "notes": "metric=on-time rate; scope=this week"
+  },
+  {
+    "id": "sql_096",
+    "question": "Rank drivers by failure rate last week.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "rate"
+    ],
+    "notes": "metric=failure rate; scope=last week"
+  },
+  {
+    "id": "sql_097",
+    "question": "Compare package volume this month vs the previous period.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "volume",
+      "package"
+    ],
+    "notes": "metric=package volume; scope=this month"
+  },
+  {
+    "id": "sql_098",
+    "question": "Which hub has the worst driver performance in Chicago?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "driver",
+      "performance"
+    ],
+    "notes": "metric=driver performance; scope=in Chicago"
+  },
+  {
+    "id": "sql_099",
+    "question": "Which driver has the best hub performance in Los Angeles?",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "performance"
+    ],
+    "notes": "metric=hub performance; scope=in Los Angeles"
+  },
+  {
+    "id": "sql_100",
+    "question": "Break down customer volume for Atlanta Hub.",
+    "expected_behavior": "sql_analytics",
+    "expected_tools": [
+      "SQL",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "customer",
+      "volume"
+    ],
+    "notes": "metric=customer volume; scope=for Atlanta Hub"
+  }
+]

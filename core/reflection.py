@@ -154,34 +154,24 @@ def _parse_json(content: str) -> dict[str, Any]:
     return json.loads(content)
 
 
-def _llm_system_prompt() -> str:
-    return (
-        "You are a strict operations answer critic for GOFO logistics.\n"
-        "You NEVER write a replacement answer for the user.\n"
-        "You ONLY critique the draft answer.\n\n"
-        "Evaluate:\n"
-        "1. Did the answer directly answer the user's question?\n"
-        "2. Was enough evidence retrieved?\n"
-        "3. Are important facts missing?\n"
-        "4. Are there unsupported claims?\n"
-        "5. Are SQL results sufficient?\n"
-        "6. Is another retrieval likely to improve the answer?\n"
-        "7. Should another tool be executed?\n"
-        "8. Is confidence high enough to return this answer?\n\n"
-        "Return ONLY JSON with this shape:\n"
-        "{\n"
-        '  "approved": false,\n'
-        '  "confidence": 0.67,\n'
-        '  "should_retry_retrieval": true,\n'
-        '  "should_retry_sql": false,\n'
-        '  "should_retry_python": false,\n'
-        '  "should_ask_user": false,\n'
-        '  "missing_information": ["..."],\n'
-        '  "feedback": ["..."],\n'
-        '  "clarification_question": null,\n'
-        '  "reasoning": "debug only"\n'
-        "}"
+def _llm_system_prompt(
+    *,
+    question: str = "",
+    answer: str = "",
+    evidence: str = "",
+) -> str:
+    """Render reflection critic prompt from the Prompt Registry."""
+    from core.prompt_manager import get_prompt_manager
+
+    _selection, rendered = get_prompt_manager().render(
+        "reflection.reflection_prompt",
+        {
+            "question": question or "(see user message)",
+            "answer": answer or "(see user message)",
+            "evidence": evidence or "(none)",
+        },
     )
+    return rendered
 
 
 class ReflectionAgent:
@@ -341,7 +331,9 @@ class ReflectionAgent:
     ) -> ReflectionResult:
         """Optionally refine reflection with an LLM critic (never writes user answers)."""
         try:
-            llm = self._llm or get_llm()
+            from core.prompt_manager import get_prompt_manager
+
+            manager = get_prompt_manager()
             payload = {
                 "question": question,
                 "draft_answer": answer,
@@ -351,12 +343,26 @@ class ReflectionAgent:
                 "source_count": len(context.sources or []),
                 "baseline_reflection": base.model_dump(exclude={"quality_report", "reasoning"}),
             }
-            response = llm.invoke(
-                [
-                    SystemMessage(content=_llm_system_prompt()),
-                    HumanMessage(content=json.dumps(payload, default=str)),
-                ]
+            evidence = json.dumps(
+                {
+                    "sql": context.sql,
+                    "sql_row_count": len(context.sql_rows or []),
+                    "source_count": len(context.sources or []),
+                    "previous_answer": previous_answer,
+                },
+                default=str,
             )
+            selection, messages = manager.build_messages(
+                "reflection.reflection_prompt",
+                {
+                    "question": question,
+                    "answer": answer,
+                    "evidence": evidence,
+                },
+                user_content=json.dumps(payload, default=str),
+            )
+            llm = self._llm or manager.llm_for(selection)
+            response = llm.invoke(messages)
             content = response.content if hasattr(response, "content") else response
             raw = content if isinstance(content, str) else str(content)
             parsed = _parse_json(raw)

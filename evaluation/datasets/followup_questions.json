@@ -1,0 +1,812 @@
+[
+  {
+    "id": "followup_001",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_002",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_003",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_004",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_005",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_006",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_007",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_008",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_009",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_010",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_011",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_012",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_013",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_014",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_015",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_016",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_017",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_018",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_019",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_020",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_021",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_022",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_023",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_024",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_025",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_026",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_027",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_028",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_029",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_030",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_031",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_032",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_033",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_034",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_035",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_036",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_037",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_038",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_039",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_040",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_041",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_042",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_043",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_044",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_045",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  },
+  {
+    "id": "followup_046",
+    "question": "Show only Chicago.",
+    "expected_behavior": "follow_up_filter",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "chicago",
+      "pickup"
+    ],
+    "notes": "Assumes prior context: Show today's pickup performance.",
+    "prior_question": "Show today's pickup performance."
+  },
+  {
+    "id": "followup_047",
+    "question": "Why is the worst one low?",
+    "expected_behavior": "follow_up_explain",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "rate"
+    ],
+    "notes": "Assumes prior context: Rank hubs by pickup rate this week.",
+    "prior_question": "Rank hubs by pickup rate this week."
+  },
+  {
+    "id": "followup_048",
+    "question": "Which hub does the top driver belong to?",
+    "expected_behavior": "follow_up_entity",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "KNOWLEDGE_GRAPH",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "hub",
+      "driver"
+    ],
+    "notes": "Assumes prior context: Show top drivers by completed pickups.",
+    "prior_question": "Show top drivers by completed pickups."
+  },
+  {
+    "id": "followup_049",
+    "question": "Compare with yesterday.",
+    "expected_behavior": "follow_up_compare",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "compare",
+      "yesterday"
+    ],
+    "notes": "Assumes prior context: Show Los Angeles Hub performance today.",
+    "prior_question": "Show Los Angeles Hub performance today."
+  },
+  {
+    "id": "followup_050",
+    "question": "Show details.",
+    "expected_behavior": "follow_up_details",
+    "expected_tools": [
+      "SQL",
+      "MEMORY",
+      "LLM"
+    ],
+    "expected_answer_keywords": [
+      "fail",
+      "detail"
+    ],
+    "notes": "Assumes prior context: Show pickup failures this week.",
+    "prior_question": "Show pickup failures this week."
+  }
+]
