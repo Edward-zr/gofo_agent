@@ -1481,18 +1481,206 @@ Add a new agent: subclass `BaseAgent`, declare capabilities, `registry.register(
 
 ---
 
-# Session 2026-07-26 — Attachment column recognition
+# Session 2026-07-26 — Attachment column recognition & file QA hardening
 
-## Problem
-Follow-ups about uploaded file columns (e.g. `发件人详细地址`) were routed to SQL (`pickups`/`address_id`) or rewritten by conversation repair into prior summary prompts, so ADA never grouped by the real file columns.
+## Session Information
 
-## Fixes
-1. **Intent router** — keep attachment session for file-column / for-each analysis; still detach ops-DB asks like "rank all hubs".
-2. **ADA** — match question tokens to real dataframe columns (incl. Chinese); aggregation uses row counts when no `package_count` column.
-3. **Conversation repair** — "No, for <column>…" keeps the new ask instead of patching "inspect this file by packages".
-4. **Analyzer** — prefer original user wording for file aggregation/column asks.
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-26 |
+| **Branch** | `new_feature_1` |
+| **Tip commit** | `8bf72fe` — *Keep uploaded-file analysis on real columns, including Chinese headers.* |
+| **Overall objective** | When a user attaches a data file, the agent must read it, recognize real column names (including Chinese), and use those columns for follow-up analysis—without falling back to the ops SQLite schema or overwriting file answers with SQL QA retries. |
 
-## Verification
-- `pytest tests/test_intent_router.py tests/test_ada_attachment_analysis.py tests/test_conversation_resolver.py`
-- Live API: upload xlsx → inspect → Chinese column package counts (PASS)
+---
+
+## Work Completed
+
+### Features implemented
+
+1. **File-column recognition in ADA**
+   - Match question tokens to DataFrame headers (exact, whitespace/newline-normalized, Chinese substrings).
+   - Aggregation / ranking / visualize prefer the named dimension (e.g. `发件人详细地址`).
+   - When the user asks “how many packages for each …” and no `package_count` column exists, use **row counts** per group (waybill-style files).
+
+2. **Attachment-preferring intent routing**
+   - File session / stored attachments + column / for-each / distribution language → `ATTACHMENT_ANALYSIS` or `ATTACHMENT_VISUALIZATION`.
+   - Clear ops-DB asks (e.g. “Rank all hubs”) still detach to `SQL_ANALYTICS`.
+
+3. **Substantive conversation repair**
+   - “No, for \<column\> …” is treated as a full replacement ask, not a patch of the previous “inspect this file” into “inspect this file by packages”.
+
+4. **Analyzer prefers original wording** for aggregation / column asks so repaired summary prompts cannot erase named columns.
+
+### Bugs fixed
+
+1. **“Inspect the file” → “No matching operational records” / `SELECT 'UNKNOWN'`**
+   - Reflection/QA treated dataframe preview rows in `sql_rows` as warehouse evidence → `retry_sql` → empty ops answer.
+   - Fixed by skipping QA/reflection for `ATTACHMENT_*` / `file_*` capabilities (`_should_run_qa`, `is_file_capability`).
+
+2. **Follow-up on Chinese column → SQL `address_id`**
+   - Router defaulted to SQL (packages/addresses language) or detached after non-followup long questions.
+   - Fixed by file-focused routing + column-analysis phrases.
+
+3. **Follow-up stayed on attachment but returned Executive Summary**
+   - Repair cue `"no"` rewrote question to `inspect this file by packages`.
+   - Fixed in `ConversationResolver._resolve_repair` + analyzer question preference.
+
+### Backend / agent / Docker improvements
+
+- `docker-compose.yml`: uvicorn `--reload`; mount `agents/` + `prompts/`.
+- `Dockerfile` CMD includes `--reload` for consistency.
+- Charts accept `preferred_dimension` / `preferred_metric`; skip time chart when a preferred dimension is set.
+- Word-boundary repair phrase matching for short tokens like `"no"` in `tools/memory/state.py` (aligned with resolver).
+
+### Tests added/updated
+
+- Router: attachment column follow-up stays on file.
+- ADA: Chinese address column aggregation counts rows.
+- Conversation resolver: “no, for 发件人详细地址 …” keeps column ask.
+- QA: file capabilities do not trigger SQL retry paths (existing suite extended earlier in the lineage).
+
+### Documentation
+
+- Rewrote `README.md` for current branch tip (`8bf72fe`).
+- This session entry appended to `DEVELOPMENT_LOG.md`.
+
+### Not in this session (already on branch from prior commits)
+
+- Prompt Registry (`prompts/`, `core/prompt_*.py`) — tip `74924e2`
+- Multi-agent Supervisor + Registry (`agents/`) — tip `74924e2`
+
+---
+
+## Files Created
+
+None. All work extended existing modules.
+
+*(Runtime-only e2e fixture `data/uploads/_e2e_cn_address.xlsx` may exist locally; do not treat as a product source file.)*
+
+---
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/intent_router.py` | Prefer attachment for file-column / for-each; keep ops-DB detach for “rank all hubs”; `_mentions_file_column_analysis` |
+| `core/agent.py` | `_should_run_qa` skips attachment/file answers; align classification with attachment routes |
+| `core/quality_assurance.py` | `is_file_capability`; never `should_retry_sql` for file modes |
+| `core/reflection.py` | Respect file-capability / no SQL retry on ADA |
+| `tools/files/data_analysis.py` | Column matching; row-count aggregation; dimension/metric inference for Chinese headers |
+| `tools/files/analysis_intent.py` | AGGREGATION for “for each”, “distribution”, “how many packages…”, column+count |
+| `tools/files/analyzer.py` | `_prefer_file_analysis_question` |
+| `tools/files/charts.py` | Preferred dimension/metric for bar charts |
+| `tools/conversation/resolver.py` | Substantive repair replacement; word-boundary `_is_repair` |
+| `tools/memory/state.py` | Word-boundary `_is_repair` for short phrases |
+| `docker-compose.yml` | `--reload`; mount `agents/`, `prompts/` |
+| `Dockerfile` | CMD `--reload` |
+| `tests/test_intent_router.py` | Column follow-up stays on attachment |
+| `tests/test_ada_attachment_analysis.py` | Chinese column aggregation |
+| `tests/test_conversation_resolver.py` | “No, for column…” keeps ask |
+| `tests/test_quality_assurance.py` | File capability QA behavior |
+| `README.md` | Full current-state rewrite (2026-07-26) |
+| `DEVELOPMENT_LOG.md` | This session |
+
+---
+
+## Problems Encountered
+
+### Problem 1 — Inspect file answered with empty ops SQL
+
+| | |
+|--|--|
+| **Problem** | Upload + “inspect this file” returned “No matching operational records” / `SELECT 'UNKNOWN'`. |
+| **Root Cause** | Router correctly chose `ATTACHMENT_ANALYSIS` and ADA produced a summary, but Reflection/QA treated preview rows as SQL evidence and forced `retry_sql`, overwriting the file answer. |
+| **Solution** | Skip QA/reflection for attachment routes and `file_*` capabilities; never set SQL retry for file answers. |
+| **Lessons Learned** | File ADA and warehouse SQL must not share the same evidence validators without a capability gate. |
+
+### Problem 2 — Column ask used `address_id` from SQLite
+
+| | |
+|--|--|
+| **Problem** | User asked for package counts by `发件人详细地址`; agent grouped by `address_id` via `pickups`/`addresses`. |
+| **Root Cause** | Long follow-up was not treated as attachment-focused; default/SQL path detached the file session. ADA also lacked Chinese column matching and “for each” aggregation intent. |
+| **Solution** | File-focused router rules + column match + AGGREGATION intent + row counts. |
+| **Lessons Learned** | “packages” + “addresses” is not enough to imply the ops warehouse when an upload is active and the user names a file column. |
+
+### Problem 3 — Attachment route correct but Executive Summary returned
+
+| | |
+|--|--|
+| **Problem** | After inspect, “no, for 发件人详细地址 column…” stayed on `ATTACHMENT_ANALYSIS` but answer was still a file summary. |
+| **Root Cause** | `ConversationResolver` treated leading `"no"` as a repair and rewrote to `inspect this file by packages`; ADA intent became `EXECUTIVE_SUMMARY`. |
+| **Solution** | Substantive replacement keeps the new ask; analyzer prefers original wording for aggregation/column intents. |
+| **Lessons Learned** | Repair must distinguish short corrections (“no, hubs”) from full replacement asks that include new analysis language. |
+
+---
+
+## Important Decisions
+
+1. **File answers never enter the SQL QA/reflection loop** — protects ADA from `SELECT 'UNKNOWN'` overwrite.
+2. **Ops-DB detach still wins for explicit warehouse questions** (“rank all hubs”) even during an attachment session.
+3. **Waybill files without `package_count` use COUNT(\*)** for “how many packages for each \<column\>”.
+4. **Prefer user’s literal question for ADA** when it is more specific than a repaired summary prompt.
+5. **Docker mounts `agents/` + `prompts/`** so Prompt Registry and multi-agent code reload with the API.
+6. **Extend modules; do not recreate** Prompt Registry / multi-agent / clarification / evaluation stacks.
+
+---
+
+## Testing
+
+### Unit / targeted
+
+```bash
+pytest tests/test_intent_router.py tests/test_ada_attachment_analysis.py tests/test_conversation_resolver.py -q
+# Result: passed (25+ including new cases)
+```
+
+### Collection
+
+```bash
+pytest --collect-only -q
+# Result: 385 tests collected
+```
+
+### Live API (Docker `:8000`)
+
+1. `POST /attachments` with Chinese-column xlsx + `session_id`
+2. `POST /ask` inspect with `attachments: [id]` → Executive Summary listing `发件人详细地址`
+3. `POST /ask` column follow-up → aggregation rows with address text + `package_count` (e.g. 3 / 1 / 1)
+4. Assert route `ATTACHMENT_ANALYSIS`, empty/non-ops SQL, no `address_id`
+
+**Result:** E2E PASS
+
+### Remaining issues
+
+- `last_attachment_file_types` sometimes stays `[]` in conversation state after ADA (routing still works via other signals; worth hardening).
+- High-cardinality address charts may still need smarter top-N labeling.
+- Full `pytest tests/ -q` not re-run end-to-end in this session after the final doc update (targeted suites + e2e verified).
+
+---
+
+## Next Recommended Tasks
+
+1. **Persist attachment metadata in state** — always set `last_attachment_file_types`, filenames, and active sheet after successful ADA so routing/context is robust when `attachment_active` flickers.
+2. **Cache invalidation on re-upload** — clear stale DataFrames in long-lived Docker sessions when the same session uploads a new file.
+3. **Chart UX for Chinese addresses** — truncate/label top-N groups; avoid pie/status charts stealing focus when preferred dimension is set.
+4. **Optional: pass file schema columns into IntentRouter** — if the question mentions an exact stored column name, force attachment even without “column” English keyword.
+5. **CI** — GitHub Action running `pytest` on push to `new_feature_1` / `main`.
+6. **Deprecation cleanup** — replace `datetime.utcnow()` in memory modules.
+7. **Do not** recreate Prompt Registry, multi-agent Supervisor, or Clarification Manager — extend only.
+
+---
+
+## Notes
+
+- API upload endpoint is **`POST /attachments`**; ask body field is **`attachments`** (list of IDs).
+- Attachment path bypasses Planner when route is `ATTACHMENT_*` (by design in `GOFOAgent`).
+- Screenshot symptom that started this work: agent answered with `address_id` volumes from ops SQL while acknowledging `发件人详细地址` in prose — root causes were routing + repair + missing column match, not missing Excel parse.
+- Commit `8bf72fe` pushed to `origin/new_feature_1`.
+- For a brand-new Cursor agent: read `README.md` (current state), then this session, then inspect `core/intent_router.py`, `tools/files/data_analysis.py`, `tools/conversation/resolver.py`, and `core/agent.py` (`_should_run_qa`) before changing attachment behavior.
+
+---
+
+*End of session 2026-07-26 (Attachment column recognition & file QA hardening).*
 
