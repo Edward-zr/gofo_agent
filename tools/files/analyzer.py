@@ -72,12 +72,15 @@ def _ada_structured_analysis(
     last_entity: str | None = None,
 ) -> QueryResponse:
     """Run ChatGPT-ADA style analysis against the parsed dataframe for this prompt."""
-    analysis_intent = detect_analysis_intent(resolved_question or question)
+    # Prefer the user's literal wording: conversation repair can rewrite follow-ups
+    # into prior summary prompts and drop named file columns.
+    analysis_question = _prefer_file_analysis_question(question, resolved_question)
+    analysis_intent = detect_analysis_intent(analysis_question)
 
     if len(contexts) >= 2 and (
-        analysis_intent == AnalysisIntent.COMPARISON or _asks_hub_change(resolved_question)
+        analysis_intent == AnalysisIntent.COMPARISON or _asks_hub_change(analysis_question)
     ):
-        return _multi_attachment_comparison(question, resolved_question, contexts, file_context)
+        return _multi_attachment_comparison(question, analysis_question, contexts, file_context)
 
     stored = _select_stored_attachment(contexts, stored_attachments)
     if stored is None or not stored.is_tabular:
@@ -85,7 +88,7 @@ def _ada_structured_analysis(
         stored = context_to_stored_attachment(primary)
 
     result = analyze_dataframe(
-        question=resolved_question or question,
+        question=analysis_question,
         stored=stored,
         intent=analysis_intent,
         previous_filter=previous_filter,
@@ -641,6 +644,32 @@ def _largest_hub_change(
 
 def _is_structured_data(contexts: list[ProcessedFileContext]) -> bool:
     return any(context.file_type in {"csv", "excel"} for context in contexts)
+
+
+def _prefer_file_analysis_question(question: str, resolved_question: str | None) -> str:
+    """Keep named file columns / aggregation asks from being overwritten by repair."""
+    original = (question or "").strip()
+    resolved = (resolved_question or "").strip()
+    if not resolved or resolved == original:
+        return original or resolved
+    original_intent = detect_analysis_intent(original)
+    resolved_intent = detect_analysis_intent(resolved)
+    if original_intent in {
+        AnalysisIntent.AGGREGATION,
+        AnalysisIntent.RANKING,
+        AnalysisIntent.COMPARISON,
+        AnalysisIntent.FILTER,
+        AnalysisIntent.VISUALIZE,
+        AnalysisIntent.ANOMALY,
+    }:
+        return original
+    if resolved_intent == AnalysisIntent.EXECUTIVE_SUMMARY and original_intent != AnalysisIntent.EXECUTIVE_SUMMARY:
+        return original
+    if re.search(r"\bcolumns?\b", original.lower()) or "列" in original or "字段" in original:
+        return original
+    if re.search(r"[\u4e00-\u9fff]", original) and original_intent != AnalysisIntent.GENERAL:
+        return original
+    return resolved
 
 
 def _extract_risks(text: str) -> list[str]:

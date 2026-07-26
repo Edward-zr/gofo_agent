@@ -56,6 +56,20 @@ def test_upload_then_rank_all_hubs_routes_sql() -> None:
     assert decision["handler"] == "SQL Planner"
 
 
+def test_attachment_column_followup_stays_on_file() -> None:
+    decision = router.route(
+        "no, for 发件人详细地址 column, there are various of addresses, "
+        "based on each addresses, I want to see how many packages for each addresses.",
+        _state(last_route=RouteIntent.ATTACHMENT_ANALYSIS, attachment_active=True),
+        has_stored_attachments=True,
+    )
+    assert decision["intent"] == RouteIntent.ATTACHMENT_ANALYSIS
+    assert decision["use_attachments"] is True
+    assert decision["detach_attachments"] is False
+    assert decision["attachment_active"] is True
+    assert decision["handler"] == "Attachment Analyzer"
+
+
 def test_upload_then_hi_routes_general_chat() -> None:
     decision = router.route(
         "Hi",

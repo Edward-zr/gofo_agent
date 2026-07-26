@@ -171,7 +171,24 @@ def _visualize(
     frame: pd.DataFrame,
     active_filter: dict[str, Any],
 ) -> dict[str, Any]:
-    charts = build_charts(frame, question=question, max_charts=4)
+    preferred_dimension = _infer_dimension(question, frame)
+    preferred_metric = None if _wants_row_count(question, frame) else _infer_metric(question, frame)
+    chart_frame = frame
+    if preferred_dimension in frame.columns and _wants_row_count(question, frame):
+        chart_frame = (
+            frame.groupby(preferred_dimension, dropna=False)
+            .size()
+            .reset_index(name="package_count")
+            .sort_values("package_count", ascending=False)
+        )
+        preferred_metric = "package_count"
+    charts = build_charts(
+        chart_frame,
+        question=question,
+        max_charts=4,
+        preferred_dimension=preferred_dimension if preferred_dimension in chart_frame.columns else None,
+        preferred_metric=preferred_metric if preferred_metric in chart_frame.columns else None,
+    )
     if not charts:
         answer = (
             f"I inspected {stored.filename}, but could not infer a chartable "
@@ -255,27 +272,63 @@ def _aggregation(
     active_filter: dict[str, Any],
 ) -> dict[str, Any]:
     dimension = _infer_dimension(question, frame)
-    metric = _infer_metric(question, frame)
     top_n = 10
     match = re.search(r"top\s+(\d+)", question.lower())
     if match:
         top_n = int(match.group(1))
-    if dimension not in frame.columns or metric not in frame.columns:
+    if dimension not in frame.columns:
         return _ranking(question, stored, frame, active_filter)
-    grouped = (
-        frame.groupby(dimension, dropna=False)[metric]
-        .sum(numeric_only=True)
-        .reset_index()
-        .sort_values(metric, ascending=False)
-        .head(top_n)
-    )
-    answer = f"Top {len(grouped)} {dimension}(s) by {metric} from {stored.filename}."
+
+    use_row_count = _wants_row_count(question, frame)
+    if use_row_count:
+        metric = "package_count"
+        grouped = (
+            frame.groupby(dimension, dropna=False)
+            .size()
+            .reset_index(name=metric)
+            .sort_values(metric, ascending=False)
+            .head(top_n)
+        )
+        answer = (
+            f"Package volume by {dimension} from {stored.filename} "
+            f"(row count per address/group).\n"
+            f"Showing top {len(grouped)} of {frame[dimension].nunique(dropna=False)} distinct values."
+        )
+        findings = [
+            f"Aggregated {len(frame)} rows into {frame[dimension].nunique(dropna=False)} "
+            f"{dimension} groups using row counts.",
+        ]
+        if not grouped.empty:
+            findings.append(
+                f"Highest volume: {grouped.iloc[0][dimension]} "
+                f"({int(grouped.iloc[0][metric])} packages)."
+            )
+    else:
+        metric = _infer_metric(question, frame)
+        if metric not in frame.columns:
+            return _ranking(question, stored, frame, active_filter)
+        grouped = (
+            frame.groupby(dimension, dropna=False)[metric]
+            .sum(numeric_only=True)
+            .reset_index()
+            .sort_values(metric, ascending=False)
+            .head(top_n)
+        )
+        answer = f"Top {len(grouped)} {dimension}(s) by {metric} from {stored.filename}."
+        findings = [f"Aggregated {len(frame)} rows into {len(grouped)} {dimension} groups."]
+
     return _result(
         answer=answer,
         rows=_preview_rows(grouped),
-        findings=[f"Aggregated {len(frame)} rows into {len(grouped)} {dimension} groups."],
+        findings=findings,
         recommendations=["Ask 'Visualize' to chart this aggregation."],
-        charts=build_charts(grouped, question=question, max_charts=1),
+        charts=build_charts(
+            grouped,
+            question=question,
+            max_charts=1,
+            preferred_dimension=dimension,
+            preferred_metric=metric,
+        ),
         active_filter=active_filter,
         intent=AnalysisIntent.AGGREGATION,
         dimension=dimension,
@@ -653,7 +706,68 @@ def _data_recommendations(frame: pd.DataFrame, findings: list[str]) -> list[str]
     return recommendations
 
 
+def _normalize_column_key(value: Any) -> str:
+    text = str(value).replace("\n", "").replace("\r", "").replace(" ", "")
+    return text.casefold()
+
+
+def _match_columns_in_question(question: str, frame: pd.DataFrame) -> list[str]:
+    """Return dataframe columns whose names appear in the user question."""
+    if frame is None or frame.empty:
+        return []
+    q_raw = question.replace("\n", "").replace("\r", "")
+    q_compact = _normalize_column_key(question)
+    matches: list[tuple[int, str]] = []
+    for column in frame.columns:
+        col_str = str(column)
+        col_compact = _normalize_column_key(column)
+        if not col_compact:
+            continue
+        if col_str in q_raw or col_compact in q_compact:
+            matches.append((len(col_compact), col_str))
+            continue
+        # Match meaningful substrings (e.g. Chinese headers without full phrase).
+        if len(col_compact) >= 2 and col_compact in q_compact:
+            matches.append((len(col_compact), col_str))
+    matches.sort(key=lambda item: item[0], reverse=True)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for _, column in matches:
+        if column not in seen:
+            seen.add(column)
+            ordered.append(column)
+    return ordered
+
+
+def _wants_row_count(question: str, frame: pd.DataFrame) -> bool:
+    """Prefer COUNT(*) when the ask is package/volume/count and no package metric exists."""
+    normalized = question.lower()
+    count_signals = (
+        "how many",
+        "count",
+        "number of",
+        "packages",
+        "package volume",
+        "volume",
+        "for each",
+        "distribution",
+    )
+    if not any(signal in normalized for signal in count_signals):
+        return False
+    if _find_column(frame, ("package_count", "packages")):
+        return False
+    return True
+
+
 def _infer_dimension(question: str, frame: pd.DataFrame) -> str:
+    matched = _match_columns_in_question(question, frame)
+    if matched:
+        # Prefer non-numeric / high-cardinality address-like columns for grouping.
+        for column in matched:
+            if not pd.api.types.is_numeric_dtype(frame[column]):
+                return column
+        return matched[0]
+
     normalized = question.lower()
     if "driver" in normalized:
         return _find_column(frame, ("driver_name", "driver")) or str(frame.columns[0])
@@ -661,6 +775,17 @@ def _infer_dimension(question: str, frame: pd.DataFrame) -> str:
         return _find_column(frame, ("customer_name", "customer")) or str(frame.columns[0])
     if "hub" in normalized or "warehouse" in normalized:
         return _find_column(frame, ("hub", "warehouse")) or str(frame.columns[0])
+    if "address" in normalized or "地址" in question:
+        address_col = _find_column(
+            frame,
+            ("发件人详细地址", "收件人详细地址", "详细地址", "address", "sender_address", "receiver_address"),
+        )
+        if address_col:
+            return address_col
+        for column in frame.columns:
+            col_l = str(column).lower()
+            if "地址" in str(column) or "address" in col_l:
+                return str(column)
     return (
         _find_column(frame, ("hub", "warehouse", "driver_name", "driver", "customer_name", "customer"))
         or str(frame.columns[0])
@@ -676,12 +801,17 @@ def _infer_metric(question: str, frame: pd.DataFrame) -> str:
         ("package", ("package_count", "packages")),
         ("pickup", ("pickup_count", "pickups")),
         ("performance", ("package_count", "pickup_count", "completion_rate")),
+        ("weight", ("总重量(kg)", "总重量", "weight", "重量")),
     )
     for token, columns in preferred:
-        if token in normalized:
+        if token in normalized or (token == "weight" and "重量" in question):
             found = _find_column(frame, columns)
             if found:
                 return found
+    matched = _match_columns_in_question(question, frame)
+    for column in matched:
+        if pd.api.types.is_numeric_dtype(frame[column]):
+            return column
     numeric = _numeric_columns(frame)
     return numeric[0] if numeric else str(frame.columns[-1])
 
@@ -705,14 +835,16 @@ def _numeric_columns(frame: pd.DataFrame) -> list[str]:
 
 
 def _find_column(frame: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:
-    lowered = {str(column).lower(): column for column in frame.columns}
+    normalized_map = {_normalize_column_key(column): column for column in frame.columns}
     for candidate in candidates:
-        if candidate in lowered:
-            return lowered[candidate]
+        key = _normalize_column_key(candidate)
+        if key in normalized_map:
+            return str(normalized_map[key])
     for candidate in candidates:
-        for column_l, column in lowered.items():
-            if candidate in column_l:
-                return column
+        key = _normalize_column_key(candidate)
+        for column_key, column in normalized_map.items():
+            if key and key in column_key:
+                return str(column)
     return None
 
 

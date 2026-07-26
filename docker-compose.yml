@@ -6,13 +6,16 @@ services:
     environment:
       PYTHONPATH: /app
       MPLCONFIGDIR: /tmp/matplotlib
+    command: uvicorn api.server:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     volumes:
-      # Mount source so Excel reader / analyzer fixes apply without stale image code.
+      # Mount source so code changes apply without stale image imports.
       - ./api:/app/api
       - ./core:/app/core
       - ./tools:/app/tools
+      - ./agents:/app/agents
+      - ./prompts:/app/prompts
       - ./frontend:/app/frontend
       - ./config.py:/app/config.py
       - ./agent.py:/app/agent.py
@@ -38,6 +41,8 @@ services:
       - ./api:/app/api
       - ./core:/app/core
       - ./tools:/app/tools
+      - ./agents:/app/agents
+      - ./prompts:/app/prompts
       - ./frontend:/app/frontend
       - ./config.py:/app/config.py
       - ./agent.py:/app/agent.py

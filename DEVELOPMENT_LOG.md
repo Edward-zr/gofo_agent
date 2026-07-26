@@ -1477,3 +1477,22 @@ Add a new agent: subclass `BaseAgent`, declare capabilities, `registry.register(
 ---
 
 *End of session 2026-07-23 (Multi-Agent Architecture).*
+
+
+---
+
+# Session 2026-07-26 — Attachment column recognition
+
+## Problem
+Follow-ups about uploaded file columns (e.g. `发件人详细地址`) were routed to SQL (`pickups`/`address_id`) or rewritten by conversation repair into prior summary prompts, so ADA never grouped by the real file columns.
+
+## Fixes
+1. **Intent router** — keep attachment session for file-column / for-each analysis; still detach ops-DB asks like "rank all hubs".
+2. **ADA** — match question tokens to real dataframe columns (incl. Chinese); aggregation uses row counts when no `package_count` column.
+3. **Conversation repair** — "No, for <column>…" keeps the new ask instead of patching "inspect this file by packages".
+4. **Analyzer** — prefer original user wording for file aggregation/column asks.
+
+## Verification
+- `pytest tests/test_intent_router.py tests/test_ada_attachment_analysis.py tests/test_conversation_resolver.py`
+- Live API: upload xlsx → inspect → Chinese column package counts (PASS)
+

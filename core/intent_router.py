@@ -134,6 +134,11 @@ _ATTACHMENT_REFERENCE_PHRASES = (
     "that file",
     "the uploaded file",
     "uploaded file",
+    "inspect the file",
+    "inspect this file",
+    "inspect file",
+    "look at the file",
+    "review the file",
     "the spreadsheet",
     "spreadsheet",
     "excel file",
@@ -293,6 +298,31 @@ class IntentRouter:
             _log_decision(decision)
             return decision
 
+        # Prefer the uploaded file when the user is clearly analyzing it (column
+        # language, "this file", new upload). Ops-DB asks like "rank all hubs"
+        # still detach to SQL even during an attachment session.
+        file_session = bool(
+            has_new_upload
+            or attachment_active
+            or (has_stored_attachments and _route_is_attachment(previous_route))
+        )
+        file_focused = bool(
+            has_new_upload
+            or references_attachment
+            or (attachment_context and _mentions_file_column_analysis(normalized))
+        )
+        prefer_attachment = bool(
+            file_focused
+            or (
+                file_session
+                and not _is_sql_analytics(normalized)
+                and not (
+                    _is_sop_question(normalized)
+                    and not _attachment_rag_comparison(normalized)
+                )
+            )
+        )
+
         if _is_general_chat(normalized):
             decision = _build_decision(
                 intent=RouteIntent.GENERAL_CHAT,
@@ -306,107 +336,83 @@ class IntentRouter:
                 chart_type=None,
                 data_sources=[],
             )
-        elif _is_sql_analytics(normalized):
-            if attachment_context and _attachment_sql_comparison(normalized):
-                decision = _attachment_decision(
-                    normalized,
-                    state=state,
-                    previous_route=previous_route,
-                    followup=followup,
-                    confidence=0.94,
-                    hybrid_sql=True,
-                    hybrid_rag=False,
-                    chart_type=chart_type if _is_visualization_request(normalized) else None,
-                )
-            elif attachment_context and _attachment_rag_comparison(normalized):
-                decision = _attachment_decision(
-                    normalized,
-                    state=state,
-                    previous_route=previous_route,
-                    followup=followup,
-                    confidence=0.94,
-                    hybrid_sql=False,
-                    hybrid_rag=True,
-                    chart_type=None,
-                )
-            else:
-                decision = _build_decision(
-                    intent=RouteIntent.SQL_ANALYTICS,
-                    confidence=0.96,
-                    followup=followup,
-                    target="SQL Planner",
-                    previous_route=previous_route,
-                    attachment_active=False,
-                    use_attachments=False,
-                    detach_attachments=True,
-                    chart_type=chart_type if _is_visualization_request(normalized) else None,
-                    data_sources=[DataSource.SQLITE.value],
-                )
-        elif _is_sop_question(normalized):
-            if attachment_context and _attachment_rag_comparison(normalized):
-                decision = _attachment_decision(
-                    normalized,
-                    state=state,
-                    previous_route=previous_route,
-                    followup=followup,
-                    confidence=0.94,
-                    hybrid_sql=False,
-                    hybrid_rag=True,
-                    chart_type=None,
-                )
-            else:
-                decision = _build_decision(
-                    intent=RouteIntent.SOP_QA,
-                    confidence=0.94,
-                    followup=followup,
-                    target="SOP Retriever",
-                    previous_route=previous_route,
-                    attachment_active=False,
-                    use_attachments=False,
-                    detach_attachments=attachment_active,
-                    chart_type=None,
-                    data_sources=[DataSource.RAG.value],
-                )
-        elif _is_visualization_request(normalized) and (
-            references_attachment
-            or (followup and _route_is_attachment(previous_route))
-            or (attachment_active and followup)
-            or has_new_upload
-        ):
-            decision = _build_decision(
-                intent=RouteIntent.ATTACHMENT_VISUALIZATION,
-                confidence=0.93,
-                followup=followup,
-                target="Attachment Visualizer",
-                previous_route=previous_route,
-                attachment_active=True,
-                use_attachments=True,
-                detach_attachments=False,
-                chart_type=chart_type,
-                data_sources=_attachment_data_sources(
-                    normalized,
-                    file_types=state.get("last_attachment_file_types") or [],
-                    hybrid_sql=False,
-                    hybrid_rag=False,
-                ),
-            )
-        elif (
-            has_new_upload
-            or references_attachment
-            or (attachment_active and followup and not _is_sql_analytics(normalized))
-            or (attachment_active and _attachment_analytical_followup(normalized))
-        ):
-            hybrid_sql = _attachment_sql_comparison(normalized)
-            hybrid_rag = _attachment_rag_comparison(normalized)
+        elif prefer_attachment and _attachment_sql_comparison(normalized):
             decision = _attachment_decision(
                 normalized,
                 state=state,
                 previous_route=previous_route,
                 followup=followup and not has_new_upload,
-                confidence=0.92 if has_new_upload or references_attachment else 0.84,
-                hybrid_sql=hybrid_sql,
-                hybrid_rag=hybrid_rag,
+                confidence=0.94,
+                hybrid_sql=True,
+                hybrid_rag=False,
                 chart_type=chart_type if _is_visualization_request(normalized) else None,
+            )
+        elif prefer_attachment and _is_sop_question(normalized) and _attachment_rag_comparison(normalized):
+            decision = _attachment_decision(
+                normalized,
+                state=state,
+                previous_route=previous_route,
+                followup=followup and not has_new_upload,
+                confidence=0.94,
+                hybrid_sql=False,
+                hybrid_rag=True,
+                chart_type=None,
+            )
+        elif prefer_attachment:
+            if _is_visualization_request(normalized):
+                decision = _build_decision(
+                    intent=RouteIntent.ATTACHMENT_VISUALIZATION,
+                    confidence=0.93,
+                    followup=followup and not has_new_upload,
+                    target="Attachment Visualizer",
+                    previous_route=previous_route,
+                    attachment_active=True,
+                    use_attachments=True,
+                    detach_attachments=False,
+                    chart_type=chart_type,
+                    data_sources=_attachment_data_sources(
+                        normalized,
+                        file_types=state.get("last_attachment_file_types") or [],
+                        hybrid_sql=False,
+                        hybrid_rag=False,
+                    ),
+                )
+            else:
+                decision = _attachment_decision(
+                    normalized,
+                    state=state,
+                    previous_route=previous_route,
+                    followup=followup and not has_new_upload,
+                    confidence=0.93 if has_new_upload or attachment_active or file_focused else 0.88,
+                    hybrid_sql=False,
+                    hybrid_rag=_attachment_rag_comparison(normalized),
+                    chart_type=chart_type if _is_visualization_request(normalized) else None,
+                )
+        elif _is_sql_analytics(normalized):
+            decision = _build_decision(
+                intent=RouteIntent.SQL_ANALYTICS,
+                confidence=0.96,
+                followup=followup,
+                target="SQL Planner",
+                previous_route=previous_route,
+                attachment_active=False,
+                use_attachments=False,
+                detach_attachments=True,
+                chart_type=chart_type if _is_visualization_request(normalized) else None,
+                data_sources=[DataSource.SQLITE.value],
+            )
+        elif _is_sop_question(normalized):
+            decision = _build_decision(
+                intent=RouteIntent.SOP_QA,
+                confidence=0.94,
+                followup=followup,
+                target="SOP Retriever",
+                previous_route=previous_route,
+                attachment_active=False,
+                use_attachments=False,
+                detach_attachments=attachment_active,
+                chart_type=None,
+                data_sources=[DataSource.RAG.value],
             )
         elif followup and previous_route:
             inherited = _inherit_route(previous_route, normalized, state)
@@ -568,11 +574,45 @@ def _references_attachment(normalized: str, *, attachment_context: bool = False)
         return True
     if not attachment_context:
         return False
+    if "the file" in normalized or "this upload" in normalized or "uploaded" in normalized:
+        return True
     if any(phrase in normalized for phrase in _ATTACHMENT_CONTEXT_FOLLOWUP_PHRASES):
+        return True
+    if _mentions_file_column_analysis(normalized):
         return True
     if re.search(r"\bwhich (hub|driver|record)\b", normalized):
         return True
     if re.search(r"\bexcel\b|\bcsv\b|\bxlsx\b|\bspreadsheet\b|\bpdf\b|\bscreenshot\b|\bimage\b", normalized):
+        return True
+    return False
+
+
+def _mentions_file_column_analysis(normalized: str) -> bool:
+    """True when the user is asking about columns/values inside an uploaded file."""
+    if re.search(r"\bcolumns?\b", normalized):
+        return True
+    if "基于" in normalized and ("列" in normalized or "字段" in normalized):
+        return True
+    if "列" in normalized or "字段" in normalized:
+        return True
+    if any(
+        phrase in normalized
+        for phrase in (
+            "for each",
+            "based on each",
+            "based on the",
+            "group by",
+            "grouped by",
+            "distribution of",
+            "how many packages for each",
+            "how many for each",
+            "count by",
+            "breakdown by",
+            "by address",
+            "each address",
+            "each addresses",
+        )
+    ):
         return True
     return False
 

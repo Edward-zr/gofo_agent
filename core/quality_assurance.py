@@ -23,6 +23,26 @@ DEFAULT_SCORE_THRESHOLD = 0.75
 APPROVE_THRESHOLD = 0.85
 MAX_QA_RETRIES = 2
 
+# Attachment / ADA answers store dataframe previews in sql_rows — not SQL evidence.
+_FILE_CAPABILITIES = frozenset(
+    {
+        "file_analysis",
+        "file_comparison",
+        "file_rag_comparison",
+        "attachment",
+        "attachment_analysis",
+        "attachment_visualization",
+    }
+)
+
+
+def is_file_capability(capability: str | None) -> bool:
+    """True when the answer came from uploaded-file analysis (not warehouse SQL)."""
+    if not capability:
+        return False
+    value = capability.lower().strip()
+    return value in _FILE_CAPABILITIES or value.startswith("file_")
+
 
 class QAAction(StrEnum):
     """Next action recommended by the Decision Engine."""
@@ -220,8 +240,24 @@ class EvidenceValidator(BaseValidator):
         overlap = _overlap_ratio(answer_tokens, evidence_tokens)
 
         capability = (context.capability or "").lower()
-        needs_rag = capability in {"rag", "multi"} or bool(sources)
-        needs_sql = capability in {"sql", "multi", "planner"} or bool(context.sql) or bool(rows)
+        file_mode = is_file_capability(capability)
+        if file_mode:
+            # Uploaded-file ADA: sql_rows are dataframe previews, not warehouse SQL.
+            needs_rag = False
+            needs_sql = False
+        else:
+            needs_rag = capability in {"rag", "multi"} or bool(sources)
+            needs_sql = (
+                capability in {"sql", "multi", "planner"}
+                or bool(context.sql)
+                or (bool(rows) and not sources and capability not in {
+                    "rag",
+                    "conversation",
+                    "llm",
+                    "clarification",
+                    "general",
+                })
+            )
 
         # Source score presence / confidence
         source_scores = [
@@ -230,6 +266,33 @@ class EvidenceValidator(BaseValidator):
             if isinstance(source, dict) and source.get("score") is not None
         ]
         avg_source_score = sum(source_scores) / len(source_scores) if source_scores else 0.0
+
+        if file_mode:
+            # Ground attachment answers on preview rows / narrative length.
+            if rows:
+                row_overlap = _overlap_ratio(answer_tokens, _token_set(_row_blob(rows)))
+                score = min(0.95, 0.7 + row_overlap * 0.25)
+            else:
+                score = 0.85 if len(answer) > 40 else 0.65
+            if any(marker in answer.lower() for marker in _HALLUCINATION_MARKERS):
+                score = min(score, 0.55)
+                problems.append("possible_hallucination_language")
+                feedback.append("Answer may rely on unsupported assumptions.")
+            return ValidatorResult(
+                name=self.name,
+                score=round(score, 3),
+                feedback=feedback,
+                missing_information=missing,
+                problems=problems,
+                should_retry_retrieval=False,
+                should_retry_sql=False,
+                details={
+                    "overlap": round(overlap, 3),
+                    "source_count": len(sources),
+                    "sql_row_count": len(rows),
+                    "file_mode": True,
+                },
+            )
 
         if needs_rag and not sources:
             score = 0.35
@@ -541,6 +604,7 @@ class DecisionEngine:
         *,
         retry_count: int = 0,
         ambiguous: bool = False,
+        capability: str | None = None,
     ) -> QualityReport:
         by_name = {result.name: result for result in results}
         evidence = by_name.get("evidence")
@@ -565,9 +629,15 @@ class DecisionEngine:
         should_retry_retrieval = any(result.should_retry_retrieval for result in results)
         should_retry_sql = any(result.should_retry_sql for result in results)
         should_retry_python = any(result.should_retry_python for result in results)
+        file_mode = is_file_capability(capability)
+
+        # Never send attachment/ADA answers through warehouse SQL retries.
+        if file_mode:
+            should_retry_sql = False
+            should_retry_retrieval = False
 
         # Completeness failures imply additional planner steps (often SQL/python).
-        if completeness_score < self.score_threshold:
+        if completeness_score < self.score_threshold and not file_mode:
             if any("comparison" in item.lower() or "failure" in item.lower() for item in missing):
                 should_retry_sql = True
             if any("root cause" in item.lower() for item in missing):
@@ -600,6 +670,15 @@ class DecisionEngine:
             action = QAAction.ACCEPT_WITH_LIMITS
             approved = True
             retry_reason = "Retry limit reached; returning best available answer."
+        elif file_mode:
+            # Attachment answers are grounded in the upload — accept rather than SQL-retry.
+            approved = True
+            action = QAAction.ACCEPT_WITH_LIMITS if overall < self.score_threshold else QAAction.APPROVE
+            retry_reason = (
+                "Attachment analysis accepted without warehouse SQL retry."
+                if action == QAAction.ACCEPT_WITH_LIMITS
+                else None
+            )
         elif evidence_score < self.score_threshold and should_retry_retrieval and not should_retry_sql:
             action = QAAction.RETRY_RETRIEVAL
             retry_reason = "Missing supporting evidence"
@@ -694,6 +773,7 @@ class QualityAssurancePipeline:
             results,
             retry_count=retry_count,
             ambiguous=context.ambiguous,
+            capability=context.capability,
         )
 
 

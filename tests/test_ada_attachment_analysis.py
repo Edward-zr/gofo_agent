@@ -87,6 +87,43 @@ def test_ranking_uses_same_dataframe() -> None:
     assert result["rows"][0]["hub"] == "Chicago Hub"
 
 
+def test_chinese_address_column_aggregation_counts_rows() -> None:
+    rows = [
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.2, "状态": "已签收"},
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 2.0, "状态": "已签收"},
+        {"发件人详细地址": "北京市朝阳区B路2号", "总重量(KG)": 0.8, "状态": "运输中"},
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.5, "状态": "已签收"},
+    ]
+    context = ProcessedFileContext(
+        attachment_id="att-cn",
+        filename="orders.xlsx",
+        file_type="excel",
+        processing_status=ProcessingStatus.READY,
+        summary="Excel with Chinese address columns.",
+        file_schema={"columns": list(rows[0].keys())},
+        statistics={"row_count": 4, "column_count": 3},
+        sample_rows=rows,
+        full_data={"rows": rows, "columns": list(rows[0].keys())},
+        source_references=["orders.xlsx"],
+    )
+    stored = context_to_stored_attachment(context)
+    question = (
+        "for 发件人详细地址 column, based on each addresses, "
+        "I want to see how many packages for each addresses."
+    )
+    assert detect_analysis_intent(question) == AnalysisIntent.AGGREGATION
+    result = analyze_dataframe(
+        question=question,
+        stored=stored,
+        intent=AnalysisIntent.AGGREGATION,
+    )
+    assert result["dimension"] == "发件人详细地址"
+    assert result["metric"] == "package_count"
+    assert result["rows"][0]["发件人详细地址"] == "上海市浦东新区A路1号"
+    assert int(result["rows"][0]["package_count"]) == 3
+    assert int(result["rows"][1]["package_count"]) == 1
+
+
 def test_filter_then_rank_uses_filtered_frame() -> None:
     stored = context_to_stored_attachment(_csv_context())
     filtered = analyze_dataframe(

@@ -205,7 +205,13 @@ def _repair_result(resolved_question: str, repair_type: str) -> dict[str, Any]:
 
 
 def _is_repair(normalized: str) -> bool:
-    return any(phrase in normalized for phrase in _REPAIR_PHRASES)
+    for phrase in _REPAIR_PHRASES:
+        if len(phrase) <= 3:
+            if re.search(rf"\b{re.escape(phrase)}\b", normalized):
+                return True
+        elif phrase in normalized:
+            return True
+    return False
 
 
 def _mentions_all_hubs(normalized: str) -> bool:

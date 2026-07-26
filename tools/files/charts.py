@@ -54,7 +54,14 @@ def _configure_matplotlib_fonts() -> None:
 _configure_matplotlib_fonts()
 
 
-def build_charts(frame: pd.DataFrame, *, question: str = "", max_charts: int = 3) -> list[dict[str, Any]]:
+def build_charts(
+    frame: pd.DataFrame,
+    *,
+    question: str = "",
+    max_charts: int = 3,
+    preferred_dimension: str | None = None,
+    preferred_metric: str | None = None,
+) -> list[dict[str, Any]]:
     """Inspect a dataframe and render appropriate chart images with matplotlib."""
     if frame is None or frame.empty:
         return []
@@ -65,7 +72,20 @@ def build_charts(frame: pd.DataFrame, *, question: str = "", max_charts: int = 3
     datetime_cols = _datetime_columns(frame)
     charts: list[dict[str, Any]] = []
 
-    if datetime_cols and numeric:
+    if preferred_dimension and preferred_dimension in frame.columns:
+        if preferred_dimension not in categorical and not pd.api.types.is_numeric_dtype(
+            frame[preferred_dimension]
+        ):
+            categorical = [preferred_dimension, *[c for c in categorical if c != preferred_dimension]]
+        elif preferred_dimension in frame.columns:
+            categorical = [preferred_dimension, *[c for c in categorical if c != preferred_dimension]]
+    if preferred_metric and preferred_metric in frame.columns:
+        if preferred_metric in numeric:
+            numeric = [preferred_metric, *[c for c in numeric if c != preferred_metric]]
+        elif pd.api.types.is_numeric_dtype(frame[preferred_metric]):
+            numeric = [preferred_metric, *numeric]
+
+    if datetime_cols and numeric and not preferred_dimension:
         charts.append(
             _line_chart(
                 frame,
@@ -76,19 +96,34 @@ def build_charts(frame: pd.DataFrame, *, question: str = "", max_charts: int = 3
         )
 
     if categorical and numeric:
-        aggregated = (
-            frame.groupby(categorical[0], dropna=False)[numeric[0]]
-            .sum(numeric_only=True)
-            .reset_index()
-            .sort_values(numeric[0], ascending=False)
-            .head(12)
-        )
+        dim = categorical[0]
+        metric = numeric[0]
+        if dim in frame.columns and metric in frame.columns and len(frame) <= 50 and metric in frame.columns:
+            # Already aggregated (e.g. groupby result) — chart as-is when unique on dim.
+            if frame[dim].is_unique or len(frame) == frame[dim].nunique(dropna=False):
+                aggregated = frame[[dim, metric]].sort_values(metric, ascending=False).head(12)
+            else:
+                aggregated = (
+                    frame.groupby(dim, dropna=False)[metric]
+                    .sum(numeric_only=True)
+                    .reset_index()
+                    .sort_values(metric, ascending=False)
+                    .head(12)
+                )
+        else:
+            aggregated = (
+                frame.groupby(dim, dropna=False)[metric]
+                .sum(numeric_only=True)
+                .reset_index()
+                .sort_values(metric, ascending=False)
+                .head(12)
+            )
         charts.append(
             _bar_chart(
                 aggregated,
-                x=categorical[0],
-                y=numeric[0],
-                title=f"{numeric[0]} by {categorical[0]}",
+                x=dim,
+                y=metric,
+                title=f"{metric} by {dim}",
             )
         )
 

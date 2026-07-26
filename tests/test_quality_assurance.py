@@ -258,3 +258,28 @@ def test_qa_never_executes_tools(monkeypatch) -> None:
     )
     assert called["sql"] is False
     assert report.evidence_score > 0
+
+
+def test_file_analysis_does_not_trigger_sql_retry() -> None:
+    """Attachment ADA answers must not be overwritten by warehouse SQL retries."""
+    context = AnswerContext(
+        question="inspect the file",
+        answer=(
+            "Executive Summary — order.xlsx\n\n"
+            "Dataset overview:\n- 100 rows across hubs ORD and ATL\n\n"
+            "Important metrics:\n- package_count average is 12"
+        ),
+        sql_rows=[
+            {"hub": "ORD", "package_count": 12},
+            {"hub": "ATL", "package_count": 8},
+        ],
+        capability="file_analysis",
+    )
+    evidence = EvidenceValidator().validate(context)
+    assert evidence.should_retry_sql is False
+    assert evidence.details.get("file_mode") is True
+
+    report = QualityAssurancePipeline().evaluate(context)
+    assert report.should_retry_sql is False
+    assert report.action != QAAction.RETRY_SQL
+    assert report.approved is True

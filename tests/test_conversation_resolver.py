@@ -123,6 +123,31 @@ def test_correction_changes_ranking_direction() -> None:
     assert "Drew" not in resolution.resolved_question
 
 
+def test_no_prefix_keeps_file_column_aggregation_ask() -> None:
+    resolver = ConversationResolver()
+    resolver.update(
+        original_question="inspect this file",
+        resolved_question="inspect this file",
+        response=QueryResponse(
+            question="inspect this file",
+            answer="Executive Summary",
+            capability="file_analysis",
+            planning_intent="EXECUTIVE_SUMMARY",
+        ),
+        intent="ATTACHMENT_ANALYSIS",
+    )
+
+    resolution = resolver.resolve(
+        "no, for 发件人详细地址 column, there are various of addresses, "
+        "based on each addresses, I want to see how many packages for each addresses."
+    )
+
+    assert resolution.repair_detected is True
+    assert "发件人详细地址" in resolution.resolved_question
+    assert "inspect this file" not in resolution.resolved_question.lower()
+    assert "by packages" not in resolution.resolved_question.lower()
+
+
 def test_why_resolves_from_previous_topic() -> None:
     resolver = ConversationResolver()
     resolver.update(

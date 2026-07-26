@@ -72,7 +72,38 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
     if any(phrase in normalized for phrase in ("filter", "only ", "where ", "for chicago", "for ord", "in chicago", "in ord")):
         return AnalysisIntent.FILTER
 
-    if any(phrase in normalized for phrase in ("top 10", "top ten", "bottom 10", "show top", "aggregate", "group by", "total by", "sum by", "average by")):
+    if any(
+        phrase in normalized
+        for phrase in (
+            "top 10",
+            "top ten",
+            "bottom 10",
+            "show top",
+            "aggregate",
+            "group by",
+            "grouped by",
+            "total by",
+            "sum by",
+            "average by",
+            "count by",
+            "breakdown by",
+            "for each",
+            "based on each",
+            "how many packages for each",
+            "how many for each",
+            "distribution of",
+            "distribution based",
+            "packages for each",
+            "volume by",
+            "count per",
+            "number of packages",
+        )
+    ):
+        return AnalysisIntent.AGGREGATION
+
+    if re.search(r"\bcolumns?\b", normalized) and any(
+        phrase in normalized for phrase in ("how many", "count", "distribution", "packages", "for each", "based on")
+    ):
         return AnalysisIntent.AGGREGATION
 
     if any(phrase in normalized for phrase in ("rank", "highest", "lowest", "best", "worst", "top performer", "bottom performer")):
@@ -90,7 +121,7 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
     if any(phrase in normalized for phrase in ("report", "business report", "full report", "ops report")):
         return AnalysisIntent.BUSINESS_REPORT
 
-    if any(phrase in normalized for phrase in ("summarize", "summarise", "summary", "what is in", "what's in", "overview", "analyze this", "analyse this", "analyze the file", "analyse the file")):
+    if any(phrase in normalized for phrase in ("summarize", "summarise", "summary", "what is in", "what's in", "overview", "analyze this", "analyse this", "analyze the file", "analyse the file", "inspect the file", "inspect this file", "inspect file", "look at the file", "look at this file", "review the file", "review this file")):
         return AnalysisIntent.EXECUTIVE_SUMMARY
 
     return AnalysisIntent.GENERAL

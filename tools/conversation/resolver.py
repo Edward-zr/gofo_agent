@@ -203,6 +203,23 @@ class ConversationResolver:
         normalized: str,
         context: dict[str, Any],
     ) -> ConversationResolution:
+        # "No, for <column> …" is a full replacement ask, not a patch of the prior
+        # question. Keep the user's new wording so file-column analysis is preserved.
+        remainder = _strip_repair_prefix(resolution.original_question)
+        if _is_substantive_replacement(remainder, normalized):
+            resolution.resolved_question = remainder
+            resolution.repair_detected = True
+            resolution.repair_type = "correction"
+            resolution.changed_dimension = None
+            resolution.inherited_context = _compact_context(context)
+            remainder_norm = _normalize(remainder)
+            resolution.metric = _infer_metric(remainder_norm)
+            resolution.dimension = _infer_dimension(remainder_norm)
+            resolution.date_range = _infer_date_range(remainder_norm) or resolution.date_range
+            resolution.filters = _explicit_filters(remainder)
+            resolution.cache_key = _cache_key(resolution)
+            return resolution
+
         base = str(self.state.get("resolved_question") or self.state.get("original_question") or resolution.original_question)
         repaired = base
         changed: str | None = None
@@ -559,7 +576,41 @@ def _compact_context(context: dict[str, Any]) -> dict[str, Any]:
 
 
 def _is_repair(normalized: str) -> bool:
-    return any(phrase in normalized for phrase in _REPAIR_PHRASES)
+    for phrase in _REPAIR_PHRASES:
+        if len(phrase) <= 3:
+            if re.search(rf"\b{re.escape(phrase)}\b", normalized):
+                return True
+        elif phrase in normalized:
+            return True
+    return False
+
+
+def _strip_repair_prefix(question: str) -> str:
+    text = question.strip()
+    patterns = (
+        r"^(no|nope|wrong|actually|instead)[,.\s:-]+",
+        r"^(i mean|i meant|not that|correction)[,.\s:-]+",
+    )
+    for pattern in patterns:
+        updated = re.sub(pattern, "", text, count=1, flags=re.IGNORECASE).strip()
+        if updated != text:
+            return updated
+    return text
+
+
+def _is_substantive_replacement(remainder: str, normalized: str) -> bool:
+    """True when the correction cue is followed by a complete new analysis request."""
+    if not remainder or remainder.lower() == normalized:
+        # Prefix strip failed; still treat long "no, …" asks as replacements.
+        remainder = re.sub(r"^(no|nope|wrong|actually|instead)[,.\s:-]+", "", normalized, count=1).strip()
+    tokens = [token for token in re.split(r"\s+", remainder) if token]
+    if len(tokens) >= 6:
+        return True
+    if re.search(r"[\u4e00-\u9fff]", remainder):
+        return True
+    if re.search(r"\bcolumns?\b", remainder.lower()) or "列" in remainder or "字段" in remainder:
+        return True
+    return False
 
 
 def _is_contextual_followup(normalized: str) -> bool:

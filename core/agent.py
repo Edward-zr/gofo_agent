@@ -517,6 +517,11 @@ class GOFOAgent:
         retry_count = 0
         current = response
         previous_answer = current.answer
+        original_capability = (response.capability or "").lower()
+        from core.quality_assurance import is_file_capability
+
+        file_answer = is_file_capability(original_capability)
+
         reflection = self.reflection_agent.critique_response(
             resolved_question or question,
             current,
@@ -526,12 +531,49 @@ class GOFOAgent:
             previous_answer=None,
         )
 
+        # Attachment/ADA answers must not be overwritten by warehouse SQL retries.
+        if file_answer and (
+            reflection.should_retry_sql
+            or "SQL" in (reflection.suggested_tool_calls or [])
+        ):
+            reflection = reflection.model_copy(
+                update={
+                    "approved": True,
+                    "should_retry_sql": False,
+                    "should_retry_retrieval": False,
+                    "should_retry_python": False,
+                    "suggested_tool_calls": [
+                        tool
+                        for tool in (reflection.suggested_tool_calls or [])
+                        if tool.upper() not in {"SQL", "RAG"}
+                    ],
+                    "feedback": list(
+                        dict.fromkeys(
+                            (reflection.feedback or [])
+                            + ["Kept attachment analysis; skipped warehouse SQL retry."]
+                        )
+                    ),
+                    "reasoning": (reflection.reasoning or "")
+                    + " | attachment capability — SQL retry suppressed",
+                }
+            )
+
         while (
             not reflection.approved
             and not reflection.should_ask_user
             and retry_count < config.REFLECTION_MAX_RETRIES
             and reflection.needs_retry()
         ):
+            if file_answer and reflection.should_retry_sql and not reflection.should_retry_python:
+                # Do not replace a good file answer with SELECT UNKNOWN from ops DB.
+                reflection = reflection.model_copy(
+                    update={
+                        "approved": True,
+                        "should_retry_sql": False,
+                        "suggested_tool_calls": [],
+                    }
+                )
+                break
             retry_count += 1
             logger.info(
                 "Reflection retry %s/%s tools=%s missing=%s",
@@ -580,10 +622,35 @@ class GOFOAgent:
                 last_entity=(last_analysis.get("last_entity") or None),
                 result_context=result_context,
             )
-            current = execution.response
+            retried = execution.response
+            if file_answer and (
+                "UNKNOWN" in (retried.generated_sql or "").upper()
+                or (retried.answer or "") == "No matching operational records were found."
+            ):
+                logger.info("Preserving attachment answer; discarding SQL UNKNOWN retry")
+                reflection = reflection.model_copy(
+                    update={
+                        "approved": True,
+                        "should_retry_sql": False,
+                        "suggested_tool_calls": [],
+                        "feedback": list(
+                            dict.fromkeys(
+                                (reflection.feedback or [])
+                                + ["Preserved attachment analysis over failed SQL retry."]
+                            )
+                        ),
+                    }
+                )
+                break
+
+            current = retried
             current.intent_classification = classification.model_dump()
             current.execution_plan = retry_plan.model_dump()
             current.step_results_summary = execution.response.step_results_summary
+            if file_answer and not current.attachment_filenames and response.attachment_filenames:
+                current.attachment_filenames = list(response.attachment_filenames)
+            if file_answer and response.file_context_summary and not current.file_context_summary:
+                current.file_context_summary = response.file_context_summary
             if current.capability == "sql" and current.sql_rows:
                 from tools.analyzer.business_reasoner import analyze_business_response
 
@@ -858,10 +925,33 @@ def _routing_intent_hint(route_decision: dict[str, Any], question: str) -> str |
 
 
 def _should_run_qa(response: QueryResponse, route_decision: dict[str, Any]) -> bool:
-    """Skip QA for pure chat / wait-for-upload / empty clarification shortcuts."""
+    """Skip QA for chat, wait-for-upload, and attachment/ADA answers.
+
+    Attachment analyses store dataframe previews in sql_rows. Running the SQL
+    QA/reflection loop overwrites good file summaries with SELECT UNKNOWN.
+    """
     intent = route_decision.get("intent")
-    if intent in {RouteIntent.WAIT_FOR_UPLOAD, RouteIntent.GENERAL_CHAT}:
+    if intent in {
+        RouteIntent.WAIT_FOR_UPLOAD,
+        RouteIntent.GENERAL_CHAT,
+        RouteIntent.ATTACHMENT_ANALYSIS,
+        RouteIntent.ATTACHMENT_VISUALIZATION,
+    }:
         return False
+    from core.quality_assurance import is_file_capability
+
+    if is_file_capability(response.capability):
+        return False
+    if route_decision.get("use_attachments") and not route_decision.get("detach_attachments"):
+        # Active attachment session answers are file-grounded.
+        if (response.capability or "").lower() in {
+            "file_analysis",
+            "file_comparison",
+            "file_rag_comparison",
+            "image_analysis",
+            "attachment",
+        } or response.attachment_filenames:
+            return False
     if (response.capability or "") in {"clarification", "conversation"}:
         return False
     if not (response.answer or "").strip() and not response.sql_rows and not response.sources:

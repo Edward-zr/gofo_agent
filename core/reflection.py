@@ -259,19 +259,23 @@ class ReflectionAgent:
             )
 
         # Confidence gate: even if validators lean approve, low confidence retries when allowed.
+        capability = (context.capability or "").lower()
+        from core.quality_assurance import is_file_capability
+
         if (
             result.approved
             and result.confidence < self.approve_confidence
             and retry_count < self.max_retries
             and not result.should_ask_user
+            and not is_file_capability(capability)
         ):
             result = result.model_copy(
                 update={
                     "approved": False,
                     "should_retry_sql": result.should_retry_sql
-                    or (context.capability or "").lower() in {"sql", "planner", "multi"},
+                    or capability in {"sql", "planner", "multi"},
                     "should_retry_retrieval": result.should_retry_retrieval
-                    or (context.capability or "").lower() in {"rag", "multi"},
+                    or capability in {"rag", "multi"},
                     "feedback": list(
                         dict.fromkeys(
                             result.feedback
@@ -283,9 +287,9 @@ class ReflectionAgent:
                     "suggested_tool_calls": _suggested_tools(
                         {
                             "should_retry_retrieval": result.should_retry_retrieval
-                            or (context.capability or "").lower() in {"rag", "multi"},
+                            or capability in {"rag", "multi"},
                             "should_retry_sql": result.should_retry_sql
-                            or (context.capability or "").lower() in {"sql", "planner", "multi"},
+                            or capability in {"sql", "planner", "multi"},
                             "should_retry_python": result.should_retry_python,
                             "should_ask_user": False,
                         }
