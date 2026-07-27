@@ -115,7 +115,7 @@ def ask_api(question: str, session_id: str, attachment_ids: list[str] | None = N
     response = requests.post(
         f"{API_BASE_URL}/ask",
         json=payload,
-        timeout=120,
+        timeout=300,
     )
     response.raise_for_status()
     return response.json()

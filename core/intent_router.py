@@ -134,6 +134,15 @@ _ATTACHMENT_REFERENCE_PHRASES = (
     "that file",
     "the uploaded file",
     "uploaded file",
+    "data file",
+    "the data file",
+    "in the data file",
+    "from the data file",
+    "i just upload",
+    "i just uploaded",
+    "i uploaded",
+    "upload you",
+    "uploaded you",
     "inspect the file",
     "inspect this file",
     "inspect file",
@@ -156,7 +165,9 @@ _ATTACHMENT_REFERENCE_PHRASES = (
     "this report",
     "that report",
     "in this file",
+    "in the file",
     "from this file",
+    "from the file",
     "analyze it",
     "summarize it",
     "summarise it",
@@ -165,6 +176,24 @@ _ATTACHMENT_REFERENCE_PHRASES = (
     "what is in this",
     "what's in this",
     "contents of this",
+)
+
+_META_ATTACHMENT_PHRASES = (
+    "which file are you reading",
+    "what file are you reading",
+    "which file are you using",
+    "what file are you using",
+    "which file are you analyzing",
+    "what file are you analyzing",
+    "file are you reading now",
+    "file are you reading previously",
+    "reading previously",
+    "current file",
+    "previous file",
+    "which attachment",
+    "what attachment",
+    "which file did you",
+    "what file did you",
 )
 
 _ATTACHMENT_FOLLOWUP_PHRASES = (
@@ -195,6 +224,9 @@ _ATTACHMENT_FOLLOWUP_PHRASES = (
 
 _ATTACHMENT_CONTEXT_FOLLOWUP_PHRASES = _ATTACHMENT_FOLLOWUP_PHRASES + (
     "belong to",
+    "address name",
+    "which address is it",
+    "give me the address",
 )
 
 _FOLLOWUP_PHRASES = (
@@ -271,11 +303,13 @@ class IntentRouter:
 
         followup = is_followup(question, state)
         chart_type = _detect_chart_type(normalized, state)
+        persisted_attachment = _has_persisted_attachment_metadata(state)
         attachment_context = _attachment_context_available(
             attachment_active=attachment_active,
             previous_route=previous_route,
             has_new_upload=has_new_upload,
             has_stored_attachments=has_stored_attachments,
+            has_persisted_metadata=persisted_attachment,
         )
         references_attachment = _references_attachment(
             normalized,
@@ -298,28 +332,83 @@ class IntentRouter:
             _log_decision(decision)
             return decision
 
+        # Meta questions about which file is active must not trigger ADA summaries.
+        if is_meta_attachment_question(normalized) and (
+            has_stored_attachments or persisted_attachment or attachment_active or has_new_upload
+        ):
+            decision = _build_decision(
+                intent=RouteIntent.GENERAL_CHAT,
+                confidence=0.97,
+                followup=False,
+                target="Attachment Context",
+                previous_route=previous_route,
+                attachment_active=attachment_active or _route_is_attachment(previous_route),
+                use_attachments=True,
+                detach_attachments=False,
+                chart_type=None,
+                data_sources=[DataSource.ATTACHMENT.value],
+            )
+            _log_decision(decision)
+            return decision
+
         # Prefer the uploaded file when the user is clearly analyzing it (column
         # language, "this file", new upload). Ops-DB asks like "rank all hubs"
         # still detach to SQL even during an attachment session.
+        # Persisted metadata + prior attachment route keep the file session alive
+        # when attachment_active flickers false between turns (no re-upload).
+        # Explicit "in the data file I uploaded…" reactivates ADA even after SOP/SQL.
+        explicit_upload_ref = _explicitly_references_uploaded_file(normalized)
+        uploaded_file_analytics = bool(
+            (has_stored_attachments or persisted_attachment)
+            and (
+                explicit_upload_ref
+                or _mentions_file_column_analysis(normalized)
+                or _mentions_uploaded_file_analytics(normalized)
+                or _is_attachment_entity_followup(normalized, state)
+            )
+        )
         file_session = bool(
             has_new_upload
             or attachment_active
-            or (has_stored_attachments and _route_is_attachment(previous_route))
+            or uploaded_file_analytics
+            or (
+                (has_stored_attachments or persisted_attachment)
+                and _route_is_attachment(previous_route)
+            )
         )
+        if not attachment_active and persisted_attachment and file_session:
+            logger.info(
+                "[Router] Using persisted attachment context\n"
+                "attachment_active=%s\n"
+                "last_attachment_file_types=%s\n"
+                "last_attachment_filenames=%s",
+                attachment_active,
+                state.get("last_attachment_file_types") or [],
+                state.get("last_attachment_filenames") or [],
+            )
         file_focused = bool(
             has_new_upload
             or references_attachment
+            or explicit_upload_ref
+            or uploaded_file_analytics
             or (attachment_context and _mentions_file_column_analysis(normalized))
+        )
+        # Inside a file session, only explicit warehouse/SOP/chat asks detach.
+        # Weak SQL-term matching ("delayed" + "pickups") must not steal ADA follow-ups.
+        explicit_ops_detach = _is_explicit_ops_db_ask(normalized)
+        # Pure SOP/glossary asks leave the file; file-compare+SOP stays hybrid.
+        pure_sop_detach = bool(
+            _is_sop_question(normalized)
+            and not _attachment_rag_comparison(normalized)
+            and not file_focused
+            and not uploaded_file_analytics
         )
         prefer_attachment = bool(
             file_focused
             or (
                 file_session
-                and not _is_sql_analytics(normalized)
-                and not (
-                    _is_sop_question(normalized)
-                    and not _attachment_rag_comparison(normalized)
-                )
+                and not explicit_ops_detach
+                and not pure_sop_detach
             )
         )
 
@@ -557,12 +646,21 @@ def _is_general_chat(normalized: str) -> bool:
 
 
 def _is_sql_analytics(normalized: str) -> bool:
-    if any(phrase in normalized for phrase in _SQL_PHRASES):
-        return True
-    if re.search(r"\brank\b", normalized) and re.search(r"\b(hub|driver|customer|warehouse)s?\b", normalized):
+    if _is_explicit_ops_db_ask(normalized):
         return True
     matched_terms = sum(1 for term in _SQL_TERMS if re.search(rf"\b{re.escape(term)}\b", normalized))
     return matched_terms >= 2
+
+
+def _is_explicit_ops_db_ask(normalized: str) -> bool:
+    """High-confidence live warehouse asks that should detach from file ADA."""
+    if any(phrase in normalized for phrase in _SQL_PHRASES):
+        return True
+    if re.search(r"\brank\b", normalized) and re.search(
+        r"\b(hub|driver|customer|warehouse)s?\b", normalized
+    ):
+        return True
+    return False
 
 
 def _is_sop_question(normalized: str) -> bool:
@@ -617,18 +715,102 @@ def _mentions_file_column_analysis(normalized: str) -> bool:
     return False
 
 
+def is_meta_attachment_question(normalized: str) -> bool:
+    """True for questions about which upload is active — not data analysis."""
+    if any(phrase in normalized for phrase in _META_ATTACHMENT_PHRASES):
+        return True
+    if re.search(r"\bwhich file\b", normalized) and any(
+        token in normalized for token in ("reading", "using", "analyzing", "analysing", "previous", "now")
+    ):
+        return True
+    return False
+
+
+def _explicitly_references_uploaded_file(normalized: str) -> bool:
+    """True when the user points at an uploaded file (reactivates ADA after SOP/SQL)."""
+    phrases = (
+        "data file",
+        "uploaded file",
+        "the uploaded",
+        "i just upload",
+        "i just uploaded",
+        "i uploaded",
+        "upload you",
+        "uploaded you",
+        "in the file",
+        "from the file",
+        "in this file",
+        "from this file",
+        "this spreadsheet",
+        "the spreadsheet",
+        "this excel",
+        "the excel",
+        "this csv",
+        "the csv",
+    )
+    return any(phrase in normalized for phrase in phrases)
+
+
+def _mentions_uploaded_file_analytics(normalized: str) -> bool:
+    """Analytics language that should stay on the upload, not the ops warehouse."""
+    has_address = "address" in normalized or "地址" in normalized
+    has_package = any(
+        token in normalized for token in ("package", "packages", "volume", "row count", "how many")
+    )
+    if has_address and has_package:
+        return True
+    if has_address and any(
+        token in normalized for token in ("most", "highest", "lowest", "name", "which")
+    ):
+        return True
+    return False
+
+
+def _is_attachment_entity_followup(normalized: str, state: dict[str, Any] | None = None) -> bool:
+    """Follow-ups like 'which address is it / give me the address name' after file analysis."""
+    _ = state  # caller already gates on stored/persisted attachment context
+    if any(
+        phrase in normalized
+        for phrase in (
+            "address name",
+            "which address is it",
+            "give me the address",
+            "what address",
+            "the address name",
+            "full address",
+        )
+    ):
+        return True
+    if re.search(r"\bwhich address\b", normalized) and any(
+        token in normalized for token in ("it", "that", "name", "this")
+    ):
+        return True
+    return False
+
+
 def _attachment_context_available(
     *,
     attachment_active: bool,
     previous_route: str | None,
     has_new_upload: bool,
     has_stored_attachments: bool,
+    has_persisted_metadata: bool = False,
 ) -> bool:
     return bool(
         has_new_upload
         or has_stored_attachments
+        or has_persisted_metadata
         or attachment_active
         or _route_is_attachment(previous_route)
+    )
+
+
+def _has_persisted_attachment_metadata(state: dict[str, Any]) -> bool:
+    return bool(
+        state.get("last_attachment_file_types")
+        or state.get("last_attachment_filenames")
+        or state.get("last_attachment")
+        or state.get("last_active_sheet")
     )
 
 

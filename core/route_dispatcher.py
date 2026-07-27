@@ -47,6 +47,9 @@ class RouteDispatcher:
             return self._dispatch_wait_for_upload(context)
 
         if intent_name in {RouteIntent.GENERAL_CHAT, RouteIntent.OPENAI_FALLBACK}:
+            meta = self._dispatch_attachment_meta(context)
+            if meta is not None:
+                return meta
             return self._dispatch_general_chat(context)
 
         conversation_response = answer_from_conversation(
@@ -59,6 +62,9 @@ class RouteDispatcher:
             return conversation_response
 
         if intent_name in {RouteIntent.ATTACHMENT_ANALYSIS, RouteIntent.ATTACHMENT_VISUALIZATION}:
+            meta = self._dispatch_attachment_meta(context)
+            if meta is not None:
+                return meta
             return self._dispatch_attachment(context)
 
         if context.cached_response is not None:
@@ -120,6 +126,58 @@ class RouteDispatcher:
             capability="conversation",
             planning_capability="conversation",
             planning_intent="WAIT_FOR_UPLOAD",
+            original_question=context.question,
+            resolved_question=context.resolved_question,
+        )
+
+    def _dispatch_attachment_meta(self, context: DispatchContext) -> QueryResponse | None:
+        """Answer 'which file are you reading' from session state — never ADA summary."""
+        from core.intent_router import is_meta_attachment_question
+
+        if not is_meta_attachment_question(context.question.lower().strip()):
+            return None
+
+        state = context.conversation_state or {}
+        current_names: list[str] = []
+        for item in context.attachment_contexts or []:
+            name = getattr(item, "filename", None)
+            if name:
+                current_names.append(str(name))
+        if not current_names:
+            current_names = list(state.get("last_attachment_filenames") or [])
+        previous_names = list(state.get("previous_attachment_filenames") or [])
+        active_sheet = state.get("last_active_sheet")
+
+        if not current_names and not previous_names:
+            answer = (
+                "I do not have an uploaded file loaded in this conversation yet.\n"
+                "Upload an Excel/CSV/PDF and I will analyze it."
+            )
+        else:
+            current = ", ".join(current_names) if current_names else "(none)"
+            previous = ", ".join(previous_names) if previous_names else "(none in this session)"
+            sheet_line = f"\nActive sheet: {active_sheet}" if active_sheet else ""
+            answer = (
+                f"Current file I am reading: **{current}**{sheet_line}\n"
+                f"Previous file in this conversation: **{previous}**\n\n"
+                "I can summarize the current file, rank addresses, or chart package volumes from it. "
+                "SOP questions (for example, “what is CBT”) use the knowledge base instead of the upload."
+            )
+
+        return QueryResponse(
+            question=context.question,
+            answer=answer,
+            sources=[],
+            capability="conversation",
+            planning_capability="conversation",
+            planning_intent="FILE_CONTEXT",
+            attachment_filenames=current_names or None,
+            file_context_summary={
+                "filenames": current_names,
+                "previous_filenames": previous_names,
+                "active_sheet": active_sheet,
+                "analysis_intent": "FILE_CONTEXT",
+            },
             original_question=context.question,
             resolved_question=context.resolved_question,
         )

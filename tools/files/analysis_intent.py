@@ -8,6 +8,7 @@ from enum import StrEnum
 
 class AnalysisIntent(StrEnum):
     WAIT_FOR_UPLOAD = "WAIT_FOR_UPLOAD"
+    FILE_CONTEXT = "FILE_CONTEXT"
     EXECUTIVE_SUMMARY = "EXECUTIVE_SUMMARY"
     BUSINESS_REPORT = "BUSINESS_REPORT"
     VISUALIZE = "VISUALIZE"
@@ -51,7 +52,30 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
     if any(phrase in normalized for phrase in _WAIT_PHRASES):
         return AnalysisIntent.WAIT_FOR_UPLOAD
 
-    if any(phrase in normalized for phrase in ("visualize", "visualise", "show chart", "show charts", "plot", "graph", "dashboard", "heatmap", "histogram", "scatter", "pie chart", "bar chart", "line chart")):
+    if _is_file_context_question(normalized):
+        return AnalysisIntent.FILE_CONTEXT
+
+    # Chart/plot asks must win before summary/general fallthrough.
+    if re.search(
+        r"\b(visualize|visualise|plot|graph|dashboard|heatmap|histogram|scatter)\b",
+        normalized,
+    ) or re.search(
+        r"\b(chart|charts)\b",
+        normalized,
+    ) or any(
+        phrase in normalized
+        for phrase in (
+            "show chart",
+            "show charts",
+            "create a chart",
+            "create chart",
+            "make a chart",
+            "draw a chart",
+            "pie chart",
+            "bar chart",
+            "line chart",
+        )
+    ):
         return AnalysisIntent.VISUALIZE
 
     if any(phrase in normalized for phrase in ("find anomal", "detect anomal", "outlier", "unusual", "spike")):
@@ -97,6 +121,12 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
             "volume by",
             "count per",
             "number of packages",
+            "packages volume",
+            "package volume",
+            "by address",
+            "by addresses",
+            "along with the packages",
+            "along with packages",
         )
     ):
         return AnalysisIntent.AGGREGATION
@@ -106,7 +136,48 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
     ):
         return AnalysisIntent.AGGREGATION
 
-    if any(phrase in normalized for phrase in ("rank", "highest", "lowest", "best", "worst", "top performer", "bottom performer")):
+    # Address / package volume asks without "for each" still need aggregation/ranking.
+    if ("address" in normalized or "地址" in question) and any(
+        token in normalized for token in ("package", "packages", "volume", "count", "how many")
+    ):
+        if any(token in normalized for token in ("most", "highest", "lowest", "best", "worst", "top", "rank")):
+            return AnalysisIntent.RANKING
+        return AnalysisIntent.AGGREGATION
+
+    # Pronoun / name follow-ups about a prior address ranking — before bare ranking cues.
+    if any(
+        phrase in normalized
+        for phrase in (
+            "address name",
+            "which address is it",
+            "give me the address",
+            "the address name",
+            "full address",
+        )
+    ) or (
+        re.search(r"\bwhich address\b", normalized)
+        and any(token in normalized for token in ("it", "that", "name", "this"))
+        and "package" not in normalized
+        and "volume" not in normalized
+    ):
+        return AnalysisIntent.LOOKUP
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "rank",
+            "highest",
+            "lowest",
+            "best",
+            "worst",
+            "top performer",
+            "bottom performer",
+            "has most",
+            "has the most",
+            "most packages",
+            "most volume",
+        )
+    ) or re.search(r"\bwhich\b.+\b(has|have)\b.+\b(most|highest|lowest)\b", normalized):
         return AnalysisIntent.RANKING
 
     if any(phrase in normalized for phrase in ("show his records", "show her records", "show their records", "show records", "list records")):
@@ -129,6 +200,29 @@ def detect_analysis_intent(question: str) -> AnalysisIntent:
 
 def is_wait_for_upload(question: str) -> bool:
     return detect_analysis_intent(question) == AnalysisIntent.WAIT_FOR_UPLOAD
+
+
+def _is_file_context_question(normalized: str) -> bool:
+    phrases = (
+        "which file are you reading",
+        "what file are you reading",
+        "which file are you using",
+        "what file are you using",
+        "which file are you analyzing",
+        "what file are you analyzing",
+        "file are you reading now",
+        "reading previously",
+        "current file",
+        "previous file",
+        "which attachment",
+        "what attachment",
+    )
+    if any(phrase in normalized for phrase in phrases):
+        return True
+    return bool(
+        re.search(r"\bwhich file\b", normalized)
+        and any(token in normalized for token in ("reading", "using", "analyzing", "analysing", "previous", "now"))
+    )
 
 
 WAIT_FOR_UPLOAD_REPLY = (

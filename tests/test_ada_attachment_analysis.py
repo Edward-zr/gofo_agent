@@ -87,6 +87,117 @@ def test_ranking_uses_same_dataframe() -> None:
     assert result["rows"][0]["hub"] == "Chicago Hub"
 
 
+def test_meta_file_context_intent_not_summary() -> None:
+    assert (
+        detect_analysis_intent(
+            "which file are you reading now, and which file are you reading previously?"
+        )
+        == AnalysisIntent.FILE_CONTEXT
+    )
+
+
+def test_address_name_followup_lookup_uses_last_entity() -> None:
+    rows = [
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.0},
+        {"发件人详细地址": "北京市朝阳区B路2号", "总重量(KG)": 2.0},
+    ]
+    context = ProcessedFileContext(
+        attachment_id="att-lookup",
+        filename="order.xlsx",
+        file_type="excel",
+        processing_status=ProcessingStatus.READY,
+        summary="addresses",
+        file_schema={"columns": list(rows[0].keys())},
+        statistics={"row_count": 2, "column_count": 2},
+        sample_rows=rows,
+        full_data={"rows": rows, "columns": list(rows[0].keys())},
+        source_references=["order.xlsx"],
+    )
+    stored = context_to_stored_attachment(context)
+    question = "which address is it, give me the address name"
+    assert detect_analysis_intent(question) == AnalysisIntent.LOOKUP
+    result = analyze_dataframe(
+        question=question,
+        stored=stored,
+        intent=AnalysisIntent.LOOKUP,
+        last_entity="上海市浦东新区A路1号",
+    )
+    assert "Executive Summary" not in result["answer"]
+    assert "上海市浦东新区A路1号" in result["answer"]
+
+
+def test_which_address_has_most_packages_ranks_not_summary() -> None:
+    rows = [
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.2, "状态": "已签收"},
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 2.0, "状态": "已签收"},
+        {"发件人详细地址": "北京市朝阳区B路2号", "总重量(KG)": 0.8, "状态": "运输中"},
+        {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.5, "状态": "已签收"},
+        {"发件人详细地址": "广州市天河区C路3号", "总重量(KG)": 1.0, "状态": "已签收"},
+    ]
+    context = ProcessedFileContext(
+        attachment_id="att-rank",
+        filename="order_1784414170040.xlsx",
+        file_type="excel",
+        processing_status=ProcessingStatus.READY,
+        summary="Excel with Chinese address columns.",
+        file_schema={"columns": list(rows[0].keys()), "active_sheet": "waybill"},
+        statistics={"row_count": 5, "column_count": 3},
+        sample_rows=rows,
+        full_data={"rows": rows, "columns": list(rows[0].keys()), "active_sheet": "waybill"},
+        source_references=["order_1784414170040.xlsx"],
+    )
+    stored = context_to_stored_attachment(context)
+    question = "which address has most packages"
+    assert detect_analysis_intent(question) == AnalysisIntent.RANKING
+    result = analyze_dataframe(
+        question=question,
+        stored=stored,
+        intent=AnalysisIntent.RANKING,
+    )
+    assert "Executive Summary" not in result["answer"]
+    assert result["intent"] == AnalysisIntent.RANKING
+    assert result["dimension"] == "发件人详细地址"
+    assert int(result["rows"][0]["package_count"]) == 3
+    assert result["rows"][0]["发件人详细地址"] == "上海市浦东新区A路1号"
+
+
+def test_create_chart_addresses_packages_volume_visualizes() -> None:
+    rows = [
+        {"发件人详细地址": "地址A", "总重量(KG)": 1.0},
+        {"发件人详细地址": "地址A", "总重量(KG)": 1.0},
+        {"发件人详细地址": "地址B", "总重量(KG)": 2.0},
+        {"发件人详细地址": "地址C", "总重量(KG)": 0.5},
+    ]
+    context = ProcessedFileContext(
+        attachment_id="att-viz",
+        filename="order_1784414170040.xlsx",
+        file_type="excel",
+        processing_status=ProcessingStatus.READY,
+        summary="Excel with addresses.",
+        file_schema={"columns": list(rows[0].keys())},
+        statistics={"row_count": 4, "column_count": 2},
+        sample_rows=rows,
+        full_data={"rows": rows, "columns": list(rows[0].keys())},
+        source_references=["order_1784414170040.xlsx"],
+    )
+    stored = context_to_stored_attachment(context)
+    question = "Create a chart showing all the addresses along with the packages volume"
+    assert detect_analysis_intent(question) == AnalysisIntent.VISUALIZE
+    result = analyze_dataframe(
+        question=question,
+        stored=stored,
+        intent=AnalysisIntent.VISUALIZE,
+    )
+    assert "Executive Summary" not in result["answer"]
+    assert result["intent"] == AnalysisIntent.VISUALIZE
+    assert result["charts"]
+    assert result["charts"][0].get("image_base64")
+    # Preferred dimension should be address, not a weight-over-time fallback.
+    assert "地址" in result["charts"][0].get("title", "") or "address" in result["charts"][0].get(
+        "title", ""
+    ).lower() or result.get("dimension") == "发件人详细地址"
+
+
 def test_chinese_address_column_aggregation_counts_rows() -> None:
     rows = [
         {"发件人详细地址": "上海市浦东新区A路1号", "总重量(KG)": 1.2, "状态": "已签收"},

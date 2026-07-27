@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from time import perf_counter
 from typing import Any
 
@@ -73,6 +74,15 @@ class GOFOAgent:
         self.clarification_manager = ClarificationManager()
         self.pending_clarification: PendingClarification | None = None
 
+    def clear_attachment_context(self) -> None:
+        """Reset attachment session memory and persisted ConversationState metadata."""
+        self.attachment_memory.deactivate()
+        self.attachment_memory.processed_contexts.clear()
+        self.attachment_memory.stored_attachments.clear()
+        self.attachment_memory.active_filters.clear()
+        self.attachment_memory.last_analysis = None
+        self.state.clear_attachment_context()
+
     def ask(self, question: str, attachment_ids: list[str] | None = None) -> dict[str, Any]:
         """Ask GOFO a question and return a dashboard-friendly response."""
         started = perf_counter()
@@ -110,6 +120,8 @@ class GOFOAgent:
                 )
 
             if route_decision["detach_attachments"]:
+                # Detach stops auto-binding for this turn; persisted metadata stays
+                # so later file follow-ups can still recover ADA context.
                 self.attachment_memory.deactivate()
                 self.state.attachment_active = False
             elif route_decision["use_attachments"]:
@@ -212,6 +224,12 @@ class GOFOAgent:
                 IntentType.Explain_Result,
                 IntentType.Unknown,
             }
+            # Short SOP glossary asks (e.g. "what is CBT") skip the heavy planner /
+            # multi-agent / reflection path so Streamlit does not hit API timeouts.
+            simple_sop_glossary = bool(
+                route_decision["intent"] == RouteIntent.SOP_QA
+                and _is_simple_sop_glossary(question)
+            )
             use_planner_pipeline = (
                 config.PLANNER_ENABLED
                 and config.INTENT_CLASSIFIER_ENABLED
@@ -225,7 +243,9 @@ class GOFOAgent:
                     RouteIntent.WAIT_FOR_UPLOAD,
                     RouteIntent.ATTACHMENT_ANALYSIS,
                     RouteIntent.ATTACHMENT_VISUALIZATION,
+                    RouteIntent.GENERAL_CHAT,
                 }
+                and not simple_sop_glossary
                 and cached is None
             )
 
@@ -312,7 +332,10 @@ class GOFOAgent:
                         file_context=file_context,
                         attachment_ids=attachment_ids,
                         intent=intent,
-                        conversation_state=previous_semantic_state,
+                        conversation_state={
+                            **previous_semantic_state,
+                            **previous_state,
+                        },
                         semantic=semantic,
                         result_context=result_context,
                         cached_response=cached,
@@ -405,6 +428,23 @@ class GOFOAgent:
             if clarification_slots.get("date_range"):
                 response.date_range = clarification_slots["date_range"]
 
+            # Enrich attachment fields before ConversationState.update so ADA
+            # metadata (file types / filenames / active sheet) persists across turns.
+            response.attachment_ids = [context.attachment_id for context in attachment_contexts] or []
+            response.attachment_filenames = [context.filename for context in attachment_contexts] or []
+            response.data_sources = route_decision.get("data_sources") or []
+            analysis_summary = dict(response.file_context_summary or {})
+            compact_file_context = _compact_file_context(file_context)
+            active_sheet = _active_sheet_from_contexts(attachment_contexts) or analysis_summary.get(
+                "active_sheet"
+            )
+            response.file_context_summary = {
+                **compact_file_context,
+                **{key: value for key, value in analysis_summary.items() if value is not None},
+            }
+            if active_sheet:
+                response.file_context_summary["active_sheet"] = active_sheet
+
             self.memory.add_turn(
                 user_question=question,
                 resolved_question=resolved_question,
@@ -447,14 +487,6 @@ class GOFOAgent:
             response.semantic_reasoning = semantic.reasoning
             response.sql_cache_hit = sql_cache_hit
             response.memory_updated = True
-            response.attachment_ids = [context.attachment_id for context in attachment_contexts] or []
-            response.attachment_filenames = [context.filename for context in attachment_contexts] or []
-            response.data_sources = route_decision.get("data_sources") or []
-            analysis_summary = dict(response.file_context_summary or {})
-            response.file_context_summary = {
-                **_compact_file_context(file_context),
-                **{key: value for key, value in analysis_summary.items() if value is not None},
-            }
             self.attachment_memory.update_analysis(
                 {
                     "file_context": file_context,
@@ -906,6 +938,19 @@ def _kpi_payload(response: QueryResponse) -> dict[str, Any]:
     return kpi
 
 
+def _is_simple_sop_glossary(question: str) -> bool:
+    """Short definitional SOP asks that should use the lean RAG dispatcher path."""
+    normalized = question.lower().strip()
+    if len(normalized.split()) > 8:
+        return False
+    return bool(
+        re.search(r"^\s*what\s+is\s+\w+", normalized)
+        or re.search(r"^\s*what\s+does\s+\w+\s+mean", normalized)
+        or re.search(r"^\s*define\s+\w+", normalized)
+        or normalized in {"cbt", "what is cbt", "what is cbt?", "what's cbt", "what's cbt?"}
+    )
+
+
 def _routing_intent_hint(route_decision: dict[str, Any], question: str) -> str | None:
     intent_name = route_decision.get("intent")
     normalized = question.lower()
@@ -1070,3 +1115,14 @@ def _compact_file_context(file_context: dict[str, Any]) -> dict[str, Any]:
         "statistics": file_context.get("statistics", []),
         "source_references": file_context.get("source_references", []),
     }
+
+
+def _active_sheet_from_contexts(contexts: list[Any]) -> str | None:
+    """Best-effort active worksheet name from processed spreadsheet contexts."""
+    for context in reversed(contexts or []):
+        schema = getattr(context, "file_schema", None) or {}
+        full_data = getattr(context, "full_data", None) or {}
+        active = schema.get("active_sheet") or full_data.get("active_sheet")
+        if active:
+            return str(active)
+    return None

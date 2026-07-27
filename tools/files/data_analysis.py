@@ -38,6 +38,8 @@ def analyze_dataframe(
         # Keep filters for follow-up drilldowns, but do not force them on fresh global asks.
         frame = _apply_filter_dict(frame, active_filter)
 
+    if intent == AnalysisIntent.FILE_CONTEXT:
+        return _file_context(question, stored, frame, active_filter)
     if intent == AnalysisIntent.VISUALIZE:
         return _visualize(question, stored, frame, active_filter)
     if intent == AnalysisIntent.RANKING:
@@ -165,6 +167,33 @@ def _business_report(
     )
 
 
+def _file_context(
+    question: str,
+    stored: StoredAttachment,
+    frame: pd.DataFrame,
+    active_filter: dict[str, Any],
+) -> dict[str, Any]:
+    """Answer meta questions about the active upload without re-running a summary."""
+    del question
+    sheet = stored.active_sheet or "n/a"
+    answer = (
+        f"I am currently reading **{stored.filename}**"
+        + (f" (active sheet: {sheet})" if stored.active_sheet else "")
+        + f".\n"
+        f"It has {len(frame)} rows and {len(frame.columns)} columns in this session.\n"
+        "Ask me to summarize it, rank addresses, or chart package volumes from this file."
+    )
+    return _result(
+        answer=answer,
+        rows=[],
+        findings=[f"Active attachment: {stored.filename}"],
+        recommendations=[],
+        charts=[],
+        active_filter=active_filter,
+        intent=AnalysisIntent.FILE_CONTEXT,
+    )
+
+
 def _visualize(
     question: str,
     stored: StoredAttachment,
@@ -202,12 +231,14 @@ def _visualize(
         )
     return _result(
         answer=answer,
-        rows=_preview_rows(frame),
+        rows=_preview_rows(chart_frame if preferred_metric == "package_count" else frame),
         findings=[f"Rendered {len(charts)} chart(s) from the uploaded dataframe."],
         recommendations=["Use filters like 'Only Chicago' to refine the charts."],
         charts=charts,
         active_filter=active_filter,
         intent=AnalysisIntent.VISUALIZE,
+        dimension=preferred_dimension if preferred_dimension in chart_frame.columns else None,
+        metric=preferred_metric,
     )
 
 
@@ -218,17 +249,31 @@ def _ranking(
     active_filter: dict[str, Any],
 ) -> dict[str, Any]:
     dimension = _infer_dimension(question, frame)
-    metric = _infer_metric(question, frame)
     ascending = any(word in question.lower() for word in ("lowest", "worst", "bottom"))
-    if dimension not in frame.columns or metric not in frame.columns:
+    if dimension not in frame.columns:
         return _executive_summary(question, stored, frame, active_filter)
 
-    grouped = (
-        frame.groupby(dimension, dropna=False)[metric]
-        .sum(numeric_only=True)
-        .reset_index()
-        .sort_values(metric, ascending=ascending)
-    )
+    # Waybill-style files often have no package_count — rank by row count instead.
+    use_row_count = _wants_row_count(question, frame)
+    if use_row_count:
+        metric = "package_count"
+        grouped = (
+            frame.groupby(dimension, dropna=False)
+            .size()
+            .reset_index(name=metric)
+            .sort_values(metric, ascending=ascending)
+        )
+    else:
+        metric = _infer_metric(question, frame)
+        if metric not in frame.columns:
+            return _executive_summary(question, stored, frame, active_filter)
+        grouped = (
+            frame.groupby(dimension, dropna=False)[metric]
+            .sum(numeric_only=True)
+            .reset_index()
+            .sort_values(metric, ascending=ascending)
+        )
+
     if grouped.empty:
         answer = f"No ranking could be computed for {dimension} in {stored.filename}."
         rows: list[dict[str, Any]] = []
@@ -237,8 +282,9 @@ def _ranking(
         best = grouped.iloc[0]
         worst = grouped.iloc[-1]
         label = "lowest" if ascending else "highest"
+        count_note = " (row count per group)" if use_row_count else ""
         answer = (
-            f"Ranking by {metric} across {dimension} in {stored.filename}:\n"
+            f"Ranking by {metric} across {dimension} in {stored.filename}{count_note}:\n"
             f"- {label.title()} {dimension}: {best[dimension]} ({best[metric]})\n"
             f"- Opposite end: {worst[dimension]} ({worst[metric]})\n"
             f"Showing top {min(10, len(grouped))} rows."
@@ -248,7 +294,13 @@ def _ranking(
             f"{best[dimension]} is {label} for {metric} ({best[metric]}).",
             f"{worst[dimension]} is at the opposite end ({worst[metric]}).",
         ]
-    charts = build_charts(grouped, question=f"rank {dimension} {metric}", max_charts=1)
+    charts = build_charts(
+        grouped,
+        question=f"rank {dimension} {metric}",
+        max_charts=1,
+        preferred_dimension=dimension,
+        preferred_metric=metric,
+    )
     result = _result(
         answer=answer,
         rows=rows,
@@ -419,6 +471,76 @@ def _lookup(
     *,
     last_entity: str | None = None,
 ) -> dict[str, Any]:
+    normalized = question.lower()
+    address_followup = any(
+        phrase in normalized
+        for phrase in (
+            "address name",
+            "which address is it",
+            "give me the address",
+            "the address name",
+            "full address",
+            "what address",
+        )
+    ) or (
+        re.search(r"\bwhich address\b", normalized)
+        and any(token in normalized for token in ("it", "that", "name", "this"))
+    )
+    address_col = _infer_dimension(question, frame) if ("address" in normalized or "地址" in question) else None
+    if not address_col or address_col not in frame.columns:
+        address_col = _find_column(
+            frame,
+            ("发件人详细地址", "收件人详细地址", "详细地址", "address", "sender_address", "receiver_address"),
+        )
+        if not address_col:
+            for column in frame.columns:
+                if "地址" in str(column) or "address" in str(column).lower():
+                    address_col = str(column)
+                    break
+
+    # "Which address is it / give me the address name" → return prior ranked address text.
+    if address_followup and last_entity and address_col:
+        answer = (
+            f"The address from the uploaded file **{stored.filename}** is:\n"
+            f"**{last_entity}**\n"
+            f"(column: {address_col})"
+        )
+        matched = frame[frame[address_col].astype(str) == str(last_entity)]
+        if matched.empty:
+            matched = frame[frame[address_col].astype(str).str.contains(str(last_entity), case=False, na=False)]
+        result = _result(
+            answer=answer,
+            rows=_preview_rows(matched if not matched.empty else frame.head(0)),
+            findings=[f"Resolved prior address entity from {address_col}."],
+            recommendations=[],
+            charts=[],
+            active_filter=active_filter,
+            intent=AnalysisIntent.LOOKUP,
+            dimension=address_col,
+        )
+        result["last_entity"] = str(last_entity)
+        return result
+
+    if address_followup and address_col and address_col in frame.columns:
+        # No prior entity — recompute top address by package/row volume.
+        ranking = _ranking(
+            "which address has most packages",
+            stored,
+            frame,
+            active_filter,
+        )
+        if ranking.get("rows"):
+            top = ranking["rows"][0]
+            address_value = top.get(address_col) or top.get("发件人详细地址") or next(iter(top.values()), None)
+            answer = (
+                f"I do not have a prior address selection, so I re-ranked {stored.filename}.\n"
+                f"The address with the most packages is:\n**{address_value}**"
+            )
+            ranking["answer"] = answer
+            ranking["intent"] = AnalysisIntent.LOOKUP
+            ranking["last_entity"] = str(address_value) if address_value is not None else None
+            return ranking
+
     entity = _extract_entity_name(question) or last_entity
     driver_col = _find_column(frame, ("driver_name", "driver"))
     hub_col = _find_column(frame, ("hub", "warehouse"))
@@ -747,10 +869,15 @@ def _wants_row_count(question: str, frame: pd.DataFrame) -> bool:
         "count",
         "number of",
         "packages",
+        "package",
         "package volume",
+        "packages volume",
         "volume",
         "for each",
         "distribution",
+        "most packages",
+        "has most",
+        "has the most",
     )
     if not any(signal in normalized for signal in count_signals):
         return False

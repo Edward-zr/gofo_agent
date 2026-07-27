@@ -1684,3 +1684,191 @@ pytest --collect-only -q
 
 *End of session 2026-07-26 (Attachment column recognition & file QA hardening).*
 
+---
+
+# Session 2026-07-26 — Persist attachment metadata across turns
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-26 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Persist attachment metadata in `ConversationState` after successful ADA so IntentRouter can continue file analysis when `attachment_active` becomes false between turns |
+| **Tests** | `tests/test_attachment_metadata_persistence.py` + router/state suites green |
+
+---
+
+## Work Completed
+
+### Why this was needed
+
+`attachment_active` is a per-turn bind flag. After a successful upload + ADA turn, follow-ups often arrive with no new upload and `attachment_active=False`. Weak SQL-term matching (e.g. “delayed” + “pickups”) could steal the route to SQL/chat even though the user was still talking about the uploaded file. Separately, `GOFOAgent` enriched `file_context_summary` **after** `ConversationState.update()`, so `last_attachment_file_types` often never got populated.
+
+### Features implemented
+
+1. **`ConversationState` attachment metadata**
+   - Fields: `last_attachment_file_types`, `last_attachment_filenames`, `last_active_sheet`, `attachment_context_timestamp`
+   - Persist only non-empty values; empty ADA summaries never wipe prior metadata
+   - `clear_attachment_context()` for explicit conversation reset
+   - Debug log: `[Memory] Persisted attachment metadata …`
+
+2. **Agent wiring**
+   - Enrich `attachment_ids` / `attachment_filenames` / `file_context_summary` (incl. `active_sheet`) **before** `state.update`
+   - `GOFOAgent.clear_attachment_context()` clears AttachmentMemory + state metadata
+   - Detach still clears only the bind flag — metadata remains
+
+3. **IntentRouter fallback**
+   - File session = new upload / active bind / (stored or persisted metadata + prior `ATTACHMENT_*` route)
+   - Inside a file session, only **explicit** ops-DB asks detach (rank-all / database phrases), not weak term counts
+   - Debug log: `[Router] Using persisted attachment context …` when reusing metadata with `attachment_active=False`
+
+### Tests
+
+- Upload Excel → follow-up without upload → ADA
+- Upload PDF → follow-up → ADA
+- `attachment_active=False` + metadata → ADA
+- Empty metadata does not overwrite
+- New upload replaces metadata
+- Worksheet switch updates `last_active_sheet`
+- Conversation reset clears metadata
+- “Rank all hubs” still detaches to SQL
+
+### Files modified
+
+| File | Why |
+|------|-----|
+| `tools/memory/state.py` | Persist / clear attachment metadata; snapshot fields |
+| `core/agent.py` | Enrich response before state update; `clear_attachment_context`; active sheet helper |
+| `core/intent_router.py` | Persisted-metadata file session; explicit ops detach; reuse logging |
+| `tests/test_attachment_metadata_persistence.py` | New coverage |
+| `README.md` | Current-state docs for persistence |
+| `DEVELOPMENT_LOG.md` | This session |
+
+### Important decisions
+
+1. Metadata outlives `attachment_active` — detach ≠ clear.
+2. Replace only on successful non-empty ADA/upload (or sheet change); never with empties.
+3. Explicit conversation reset is the only bulk clear path.
+4. Explicit warehouse asks still win over file session.
+
+### Remaining / next
+
+- Stale DataFrame cache invalidation on re-upload in long-lived Docker sessions
+- Chart UX for high-cardinality Chinese address columns
+- Broader PlanExecutor coverage for Follow_Up / Upload_File
+
+---
+
+*End of session 2026-07-26 (Persist attachment metadata across turns).*
+
+---
+
+# Session 2026-07-26 — Fix ADA follow-ups stuck on Executive Summary
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-26 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | After a successful file summary, follow-ups like “which address has most packages” and “Create a chart … addresses … packages volume” were repeating the Executive Summary instead of ranking/visualizing |
+| **Tests** | `tests/test_ada_attachment_analysis.py` — **13 passed** |
+
+---
+
+## Root Cause
+
+`detect_analysis_intent()` returned `GENERAL` for those prompts (no “highest/for each/show chart” phrases). `analyze_dataframe` maps `GENERAL` → `_executive_summary`, so every follow-up looked identical to “summarize this file”.
+
+Separately, `_ranking` required a real `package_count` column; waybill files without that metric fell back to Executive Summary even when intent was correct.
+
+## Fix
+
+1. **`analysis_intent.py`**
+   - Treat bare `chart` / “create a chart” as `VISUALIZE`
+   - Treat “which address has most packages” / address+package volume language as `RANKING` or `AGGREGATION`
+
+2. **`data_analysis.py`**
+   - Ranking uses row-count when no `package_count` (same as aggregation)
+   - Visualize result carries preferred dimension/metric
+
+3. **Tests** for both user prompts against Chinese address columns
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `tools/files/analysis_intent.py` | Broader ranking / visualize / address+package detection |
+| `tools/files/data_analysis.py` | Row-count ranking; visualize metadata |
+| `tests/test_ada_attachment_analysis.py` | Regression for the screenshot follow-ups |
+| `DEVELOPMENT_LOG.md` | This session |
+
+---
+
+*End of session 2026-07-26 (Fix ADA follow-ups stuck on Executive Summary).*
+
+---
+
+# Session 2026-07-26 — Distinguish meta / SOP / uploaded-file analytics routing
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-26 |
+| **Branch** | `new_feature_1` |
+| **Overall objective** | Fix wrong answers when users mix meta file questions, SOP glossary asks, and uploaded-file analytics / follow-ups |
+| **Tests** | Router + ADA + meta dispatch suites — **43 passed** |
+
+---
+
+## Bugs (from screenshots)
+
+1. “Which file are you reading now / previously?” → Executive Summary (ADA)
+2. “What is CBT?” (SOP) → API timeout (heavy planner path)
+3. “In the data file I just uploaded… address with most packages” after SOP → ops SQL `address_id` (not the upload)
+4. “Which address is it, give me the address name” → SOP / fallback instead of ADA follow-up
+
+## Fixes
+
+1. **IntentRouter**
+   - Meta attachment questions → `GENERAL_CHAT` / handler `Attachment Context` (no ADA summary)
+   - Explicit upload references + address/package analytics reactivate ADA even after SOP/SQL
+   - Address-name follow-ups return to ADA when stored/persisted attachments exist
+   - Pure SOP glossary still detaches from the file session
+
+2. **RouteDispatcher**
+   - Answers meta file questions from `last_attachment_filenames` / `previous_attachment_filenames`
+
+3. **ADA**
+   - `FILE_CONTEXT` intent; LOOKUP for address-name follow-ups using `last_entity`
+
+4. **ConversationState**
+   - Tracks `previous_attachment_filenames` when a new upload replaces the current one
+
+5. **GOFOAgent / Streamlit**
+   - Short “what is X” SOP asks skip planner/multi-agent path
+   - `/ask` client timeout raised to 300s
+   - Dispatcher receives ConversationState snapshot (filenames) merged into conversation_state
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `core/intent_router.py` | Meta / upload-reactivate / entity-followup routing |
+| `core/route_dispatcher.py` | Meta attachment answers |
+| `core/agent.py` | Simple SOP glossary bypass; pass state snapshot |
+| `tools/files/analysis_intent.py` | `FILE_CONTEXT` + address LOOKUP |
+| `tools/files/data_analysis.py` | Meta + address-name lookup handlers |
+| `tools/memory/state.py` | `previous_attachment_filenames` |
+| `frontend/app.py` | Longer ask timeout |
+| `tests/test_intent_router.py` | New routing cases |
+| `tests/test_attachment_meta_dispatch.py` | Meta answer regression |
+| `tests/test_ada_attachment_analysis.py` | FILE_CONTEXT / LOOKUP |
+| `README.md` / `DEVELOPMENT_LOG.md` | Docs |
+
+---
+
+*End of session 2026-07-26 (Distinguish meta / SOP / uploaded-file analytics routing).*
+

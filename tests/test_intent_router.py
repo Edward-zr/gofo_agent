@@ -160,3 +160,61 @@ def test_trend_visualization_selects_line_chart() -> None:
         _state(last_route=RouteIntent.SQL_ANALYTICS, last_topic="trend"),
     )
     assert decision["chart_type"] == "line"
+
+
+def test_meta_which_file_does_not_route_to_ada_summary() -> None:
+    decision = router.route(
+        "which file are you reading now, and which file are you reading previously?",
+        _state(
+            last_route=RouteIntent.ATTACHMENT_ANALYSIS,
+            attachment_active=True,
+            last_attachment_filenames=["order_1784414170040.xlsx"],
+        ),
+        has_stored_attachments=True,
+    )
+    assert decision["intent"] == RouteIntent.GENERAL_CHAT
+    assert decision["handler"] == "Attachment Context"
+    assert decision["use_attachments"] is True
+    assert decision["detach_attachments"] is False
+
+
+def test_data_file_after_sop_routes_to_attachment_not_sql() -> None:
+    decision = router.route(
+        "in the data file, I just upload you, show me the address that has most packages volume.",
+        _state(
+            last_route=RouteIntent.SOP_QA,
+            attachment_active=False,
+            last_attachment_file_types=["excel"],
+            last_attachment_filenames=["order_1784414170040.xlsx"],
+        ),
+        has_stored_attachments=True,
+    )
+    assert decision["intent"] == RouteIntent.ATTACHMENT_ANALYSIS
+    assert decision["use_attachments"] is True
+    assert decision["detach_attachments"] is False
+
+
+def test_address_name_followup_after_sql_returns_to_attachment() -> None:
+    decision = router.route(
+        "which address is it, give me the address name",
+        _state(
+            last_route=RouteIntent.SQL_ANALYTICS,
+            attachment_active=False,
+            last_attachment_file_types=["excel"],
+            last_attachment_filenames=["order_1784414170040.xlsx"],
+        ),
+        has_stored_attachments=True,
+    )
+    assert decision["intent"] == RouteIntent.ATTACHMENT_ANALYSIS
+    assert decision["use_attachments"] is True
+
+
+def test_what_is_cbt_during_file_session_routes_sop() -> None:
+    decision = router.route(
+        "what is cbt",
+        _state(last_route=RouteIntent.ATTACHMENT_ANALYSIS, attachment_active=True),
+        has_stored_attachments=True,
+    )
+    assert decision["intent"] == RouteIntent.SOP_QA
+    assert decision["use_attachments"] is False
+    assert decision["detach_attachments"] is True

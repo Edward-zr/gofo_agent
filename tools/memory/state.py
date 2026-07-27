@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import re
 from typing import Any
 
+from core.logger import get_logger
 from core.models import QueryResponse
+
+logger = get_logger("memory")
 
 _REPAIR_PHRASES = (
     "actually",
@@ -17,6 +21,15 @@ _REPAIR_PHRASES = (
     "wrong",
     "not that",
     "instead",
+)
+
+_FILE_CAPABILITIES = frozenset(
+    {
+        "file_analysis",
+        "file_visualization",
+        "attachment_analysis",
+        "attachment_visualization",
+    }
 )
 
 
@@ -43,6 +56,10 @@ class ConversationState:
     last_topic: str | None = None
     attachment_active: bool = False
     last_attachment_file_types: list[str] = field(default_factory=list)
+    last_attachment_filenames: list[str] = field(default_factory=list)
+    previous_attachment_filenames: list[str] = field(default_factory=list)
+    last_active_sheet: str | None = None
+    attachment_context_timestamp: str | None = None
 
     def snapshot(self) -> dict[str, Any]:
         """Return a serializable copy of the current state."""
@@ -66,7 +83,32 @@ class ConversationState:
             "last_topic": self.last_topic,
             "attachment_active": self.attachment_active,
             "last_attachment_file_types": list(self.last_attachment_file_types),
+            "last_attachment_filenames": list(self.last_attachment_filenames),
+            "previous_attachment_filenames": list(self.previous_attachment_filenames),
+            "last_active_sheet": self.last_active_sheet,
+            "attachment_context_timestamp": self.attachment_context_timestamp,
         }
+
+    def has_persisted_attachment_metadata(self) -> bool:
+        """True when a prior successful attachment turn left reusable file context."""
+        return bool(
+            self.last_attachment_file_types
+            or self.last_attachment_filenames
+            or self.last_attachment
+            or self.last_active_sheet
+        )
+
+    def clear_attachment_context(self) -> None:
+        """Explicitly clear persisted attachment metadata (conversation reset)."""
+        self.attachment_active = False
+        self.last_attachment = None
+        self.last_attachment_summary = None
+        self.last_attachment_file_types = []
+        self.last_attachment_filenames = []
+        self.previous_attachment_filenames = []
+        self.last_active_sheet = None
+        self.attachment_context_timestamp = None
+        logger.info("[Memory] Cleared attachment metadata")
 
     def resolve(self, question: str) -> dict[str, Any]:
         """Resolve state-based repairs and result references deterministically."""
@@ -120,19 +162,72 @@ class ConversationState:
                 self.last_visualization = route_decision["chart_type"]
             if route_decision.get("intent") == "SOP_QA":
                 self.last_sop_query = resolved_question
-        attachment_filenames = response.attachment_filenames or []
-        attachment_ids = response.attachment_ids or []
+        self._persist_attachment_metadata(response, route_decision)
+
+    def _persist_attachment_metadata(
+        self,
+        response: QueryResponse,
+        route_decision: dict[str, Any] | None,
+    ) -> None:
+        """Store attachment metadata from successful ADA turns; never erase with empties."""
+        summary = response.file_context_summary or {}
+        attachment_ids = [item for item in (response.attachment_ids or []) if item]
+        filenames = _non_empty_str_list(
+            response.attachment_filenames or summary.get("filenames") or []
+        )
+        file_types = _non_empty_str_list(summary.get("file_types") or [])
+        active_sheet = _coerce_optional_str(
+            summary.get("active_sheet") or summary.get("last_active_sheet")
+        )
+        summaries = summary.get("summaries") or []
+        summary_text = summaries[-1] if summaries else None
+
+        # Successful file answers and active attachment routes refresh metadata.
+        file_answer = _is_file_response(response, route_decision)
+        should_refresh = bool(
+            file_answer
+            or attachment_ids
+            or filenames
+            or file_types
+            or active_sheet
+        )
+        if not should_refresh:
+            return
+
+        changed = False
         if attachment_ids:
             self.last_attachment = attachment_ids[-1]
-        elif attachment_filenames:
-            self.last_attachment = attachment_filenames[-1]
-        if response.file_context_summary:
-            summaries = response.file_context_summary.get("summaries") or []
-            if summaries:
-                self.last_attachment_summary = summaries[-1]
-            file_types = response.file_context_summary.get("file_types") or []
-            if file_types:
-                self.last_attachment_file_types = list(file_types)
+            changed = True
+        elif filenames and not self.last_attachment:
+            self.last_attachment = filenames[-1]
+            changed = True
+
+        if filenames:
+            if self.last_attachment_filenames and filenames != self.last_attachment_filenames:
+                self.previous_attachment_filenames = list(self.last_attachment_filenames)
+            self.last_attachment_filenames = filenames
+            changed = True
+        if file_types:
+            self.last_attachment_file_types = file_types
+            changed = True
+        if active_sheet:
+            self.last_active_sheet = active_sheet
+            changed = True
+        if summary_text:
+            self.last_attachment_summary = summary_text
+            changed = True
+
+        if changed:
+            self.attachment_context_timestamp = datetime.now(timezone.utc).isoformat()
+            logger.info(
+                "[Memory] Persisted attachment metadata\n"
+                "file_types=%s\n"
+                "filenames=%s\n"
+                "active_sheet=%s",
+                self.last_attachment_file_types,
+                self.last_attachment_filenames,
+                self.last_active_sheet,
+            )
 
     def _resolve_repair(self, question: str, normalized: str) -> dict[str, Any] | None:
         dimension = _mentioned_dimension(normalized) or self.last_dimension
@@ -309,3 +404,27 @@ def _extract_worst_hub(summary: str) -> str | None:
         if match:
             return match.group(1).strip()
     return None
+
+
+def _non_empty_str_list(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    return [str(item).strip() for item in values if str(item or "").strip()]
+
+
+def _coerce_optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _is_file_response(
+    response: QueryResponse,
+    route_decision: dict[str, Any] | None,
+) -> bool:
+    capability = (response.capability or response.planning_capability or "").lower()
+    if capability in _FILE_CAPABILITIES or capability.startswith("file_"):
+        return True
+    route = (route_decision or {}).get("intent") or ""
+    return route in {"ATTACHMENT_ANALYSIS", "ATTACHMENT_VISUALIZATION"}
