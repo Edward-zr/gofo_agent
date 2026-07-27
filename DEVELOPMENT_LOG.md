@@ -1816,10 +1816,11 @@ Separately, `_ranking` required a real `package_count` column; waybill files wit
 
 | Item | Value |
 |------|--------|
-| **Date** | 2026-07-26 |
+| **Date** | 2026-07-26 (docs tip refreshed 2026-07-27) |
 | **Branch** | `new_feature_1` |
+| **Tip commit** | `f8d0be9` — *Fix attachment follow-up routing so ADA, SOP, and meta asks stay distinct.* |
 | **Overall objective** | Fix wrong answers when users mix meta file questions, SOP glossary asks, and uploaded-file analytics / follow-ups |
-| **Tests** | Router + ADA + meta dispatch suites — **43 passed** |
+| **Tests** | Router + ADA + meta dispatch suites — **43 passed** (full collect **403**) |
 
 ---
 
@@ -1867,6 +1868,10 @@ Separately, `_ranking` required a real `package_count` column; waybill files wit
 | `tests/test_attachment_meta_dispatch.py` | Meta answer regression |
 | `tests/test_ada_attachment_analysis.py` | FILE_CONTEXT / LOOKUP |
 | `README.md` / `DEVELOPMENT_LOG.md` | Docs |
+
+### Documentation note (2026-07-27)
+
+`README.md` was refreshed so tip `f8d0be9`, test count **403**, `previous_attachment_filenames`, meta/SOP/file routing table, SOP glossary planner bypass, and Streamlit `/ask` timeout **300s** match the code. This DEVELOPMENT_LOG session already covered the engineering work; no feature code changed in the docs refresh.
 
 ---
 

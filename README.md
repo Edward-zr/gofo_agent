@@ -29,12 +29,12 @@ Give operations users one chat surface for:
 
 | Item | Value |
 |------|--------|
-| **Branch tip** | `8bf72fe` — *Keep uploaded-file analysis on real columns, including Chinese headers.* |
-| **Prior tip** | `74924e2` — Prompt Registry + Multi-Agent Supervisor |
-| **Tests** | **385** collected (`pytest --collect-only`) |
+| **Branch tip** | `f8d0be9` — *Fix attachment follow-up routing so ADA, SOP, and meta asks stay distinct.* |
+| **Prior tip** | `8bf72fe` — Keep uploaded-file analysis on real columns (Chinese headers) |
+| **Tests** | **403** collected (`pytest --collect-only`) |
 | **Runtime** | FastAPI `:8000` + Streamlit `:8501` via Docker Compose (`--reload` + source mounts) |
 
-Completed control plane: Intent Classifier → Data Source Selection → Planner → Clarification → Supervisor/Orchestrator → Generator → Reflection/QA (skipped for file ADA). Latest hardening: attachment session stays on uploaded columns; conversation repair no longer rewrites file-column asks into summary prompts; **attachment metadata persists across turns** so ADA follow-ups keep working when `attachment_active` flickers false.
+Completed control plane: Intent Classifier → Data Source Selection → Planner → Clarification → Supervisor/Orchestrator → Generator → Reflection/QA (skipped for file ADA). Latest hardening: attachment metadata persists across turns; ADA follow-ups (address ranking / charts) no longer collapse to Executive Summary; IntentRouter distinguishes **meta file questions**, **SOP glossary**, and **uploaded-file analytics** (including re-entering ADA after SOP/SQL).
 
 ---
 
@@ -63,11 +63,13 @@ Relative to the early `main` checkpoint, this line of development adds:
 10. **Reflection + Quality Assurance** — bounded retries; **file ADA skips SQL QA**
 11. **End-to-end multimodal attachments** — upload, preview, ADA, matplotlib charts
 12. **File-column recognition** — match question text to real DataFrame headers (incl. Chinese); row-count aggregation when no `package_count`
-13. **Persisted attachment metadata** — `last_attachment_file_types` / filenames / active sheet survive across turns; empty ADA responses never erase prior values
-14. **Hybrid RAG** — Chroma dense + BM25 + RRF + cross-encoder rerank + confidence engine
-15. **Excel robustness** — shared `excel_reader` (no primary openpyxl `read_only`)
-16. **Docker source mounts + CJK fonts** — live iteration; Chinese chart labels
-17. **Documentation split** — README = current state; DEVELOPMENT_LOG = append-only history
+13. **Persisted attachment metadata** — `last_attachment_file_types` / filenames / active sheet / previous filenames survive across turns; empty ADA responses never erase prior values
+14. **ADA follow-up intents** — address ranking / “create a chart” / package-volume asks stay RANKING/VISUALIZE (not Executive Summary)
+15. **Meta vs SOP vs file routing** — “which file are you reading…”, SOP glossary (“what is CBT”), and “in the data file I uploaded…” stay on the correct path
+16. **Hybrid RAG** — Chroma dense + BM25 + RRF + cross-encoder rerank + confidence engine
+17. **Excel robustness** — shared `excel_reader` (no primary openpyxl `read_only`)
+18. **Docker source mounts + CJK fonts** — live iteration; Chinese chart labels
+19. **Documentation split** — README = current state; DEVELOPMENT_LOG = append-only history
 
 ---
 
@@ -143,8 +145,8 @@ Frontend talks only to FastAPI (`API_BASE_URL`, default `http://localhost:8000`)
 | Tool orchestrator | `core/tool_orchestrator.py` | Parallel waves, deps, AgentState |
 | Quality assurance | `core/quality_assurance.py` | Evidence / reasoning / completeness; `is_file_capability()` |
 | Reflection | `core/reflection.py` | Self-critique API for Planner retries |
-| Intent router | `core/intent_router.py` | Attachment activate/detach; file-column preference; persisted-metadata fallback |
-| Dispatcher | `core/route_dispatcher.py` | ATTACHMENT_* → `analyze_attachments` |
+| Intent router | `core/intent_router.py` | Attachment activate/detach; file-column preference; persisted-metadata fallback; meta/SOP/file distinction |
+| Dispatcher | `core/route_dispatcher.py` | ATTACHMENT_* → ADA; meta file-context answers |
 | Prompt Registry | `core/prompt_*.py` | Versioned prompt load / render / invoke |
 | Models | `core/models.py` | `QueryResponse` (+ plan, QA, reflection, agent_state) |
 
@@ -257,15 +259,27 @@ GOFOAgent.ask(attachments=[id])
 | Field | Purpose |
 |-------|---------|
 | `last_attachment_file_types` | e.g. `["excel"]`, `["pdf"]` — router data-source hints |
-| `last_attachment_filenames` | e.g. `["pickup_data.xlsx"]` — filename-aware routing later |
+| `last_attachment_filenames` | e.g. `["pickup_data.xlsx"]` — current upload(s) |
+| `previous_attachment_filenames` | Prior upload(s) when a new file replaces the current one |
 | `last_active_sheet` | Active worksheet for “summarize this sheet” |
 | `attachment_context_timestamp` | UTC ISO time of last successful persist |
 
 **Why:** `attachment_active` is a per-turn bind flag. Clearing it (no new upload, SQL/chat detach) must **not** erase file context. The IntentRouter treats prior attachment route + persisted metadata as a file session and prefers ADA unless the user makes an explicit ops-DB / SOP / chat ask.
 
-**Replace when:** a new attachment is processed successfully, the active sheet changes, or ADA reports a new usable file. **Never** overwrite with empty lists/None from a sparse response.
+**Replace when:** a new attachment is processed successfully, the active sheet changes, or ADA reports a new usable file. **Never** overwrite with empty lists/None from a sparse response. When filenames change, copy the old list into `previous_attachment_filenames`.
 
 **Clear when:** `GOFOAgent.clear_attachment_context()` / `ConversationState.clear_attachment_context()` (explicit conversation reset). Detach alone does not clear metadata.
+
+### Meta / SOP / uploaded-file question routing
+
+| User ask | Expected route | Notes |
+|----------|----------------|-------|
+| “Which file are you reading now / previously?” | `GENERAL_CHAT` → handler **Attachment Context** | Answers filenames from state; **never** Executive Summary |
+| “What is CBT?” / short “what is X” | `SOP_QA` | Detaches file session; lean dispatcher path (skips heavy planner); Streamlit `/ask` timeout **300s** |
+| “In the data file I uploaded… address with most packages” | `ATTACHMENT_ANALYSIS` | Re-enters ADA even after SOP/SQL; not ops `address_id` |
+| “Which address is it / give me the address name” | `ATTACHMENT_ANALYSIS` (LOOKUP) | Uses `last_entity` from prior file ranking |
+| “Create a chart showing addresses… packages volume” | `ATTACHMENT_VISUALIZATION` / VISUALIZE | Not Executive Summary |
+| “Rank all hubs” | `SQL_ANALYTICS` | Explicit ops-DB detach still wins |
 
 **Rules that must not regress:**
 
@@ -318,7 +332,7 @@ gofo_agent/
 │   └── synthesizer.py
 ├── cli/                 # Interactive CLI REPL
 ├── evaluation/          # Benchmark + prompt experiments
-├── tests/               # Pytest suite (~385 tests)
+├── tests/               # Pytest suite (~403 tests)
 ├── scripts/             # Demo DB + helpers
 ├── data/                # SQLite DBs + uploads (runtime; do not commit secrets)
 ├── chroma_db/           # Vector store persistence
@@ -340,9 +354,9 @@ gofo_agent/
 
 | File | Responsibility |
 |------|----------------|
-| `core/agent.py` | Single facade; wires pipeline; skips QA for attachment routes |
-| `core/intent_router.py` | Attachment session + file-column preference vs ops SQL detach; persisted-metadata fallback |
-| `tools/memory/state.py` | ConversationState; attachment metadata persist / clear (never wipe with empties) |
+| `core/agent.py` | Single facade; wires pipeline; skips QA for attachment routes; short SOP glossary bypasses planner |
+| `core/intent_router.py` | Attachment session + file-column preference vs ops SQL detach; persisted-metadata fallback; meta/SOP/file distinction |
+| `core/route_dispatcher.py` | ATTACHMENT_* → ADA; meta “which file…” answers from state |
 | `core/intent_classifier.py` | Primary intent classification |
 | `core/data_source_selector.py` | Minimum necessary data sources |
 | `core/planner.py` | ExecutionPlan + capabilities (never executes) |
@@ -351,10 +365,10 @@ gofo_agent/
 | `core/quality_assurance.py` | Validators; `is_file_capability` |
 | `core/reflection.py` | Critic API |
 | `core/prompt_manager.py` / `prompt_registry.py` | Prompt load/render/invoke |
-| `core/route_dispatcher.py` | ATTACHMENT_* → ADA |
 | `core/clarification_manager.py` | Ask before tools |
-| `tools/files/data_analysis.py` | Column match + aggregation / ranking / summary |
-| `tools/files/analysis_intent.py` | Per-prompt ADA intent (AGGREGATION, VISUALIZE, …) |
+| `tools/memory/state.py` | ConversationState; attachment metadata persist / clear; previous filenames |
+| `tools/files/data_analysis.py` | Column match + ranking/aggregation/lookup; row-count when no package_count |
+| `tools/files/analysis_intent.py` | Per-prompt ADA intent (FILE_CONTEXT, AGGREGATION, VISUALIZE, …) |
 | `tools/files/analyzer.py` | Prefer original wording for file analysis |
 | `tools/files/charts.py` | Matplotlib PNG; preferred dimension/metric |
 | `tools/files/excel_reader.py` | Robust Excel IO |
@@ -362,7 +376,7 @@ gofo_agent/
 | `tools/rag/hybrid.py` | Hybrid retrieval |
 | `tools/sql/schema_retriever.py` | Relevant schema only |
 | `api/server.py` | Thin HTTP; shared attachment service |
-| `frontend/app.py` | Chat + chart rendering |
+| `frontend/app.py` | Chat + chart rendering; `/ask` timeout 300s |
 | `config.py` | All env defaults |
 | `agents/supervisor/supervisor_agent.py` | Capability dispatch (no business logic) |
 | `agents/registry/agent_registry.py` | Discover / health / select agents |
@@ -582,19 +596,21 @@ These are intentional. Future agents should **not** reverse them without an expl
 9. **Centralized IntentRouter owns attachment activate/detach** — uploads must not permanently hijack the session; ops-DB asks (“rank all hubs”) still detach.
 10. **File-column / for-each language prefers attachment** while a file session or stored attachments exist.
 11. **Persisted attachment metadata outlives `attachment_active`** — detach/flicker clears the bind flag only; IntentRouter reuses metadata for ADA follow-ups until explicit reset or a new file replaces it.
-12. **Shared AttachmentService in API process** — session agents reuse the same upload index.
-13. **Parse-once ADA** — store DataFrame; fresh `analyze_dataframe` per prompt; match real column names from the question.
-14. **Substantive conversation repairs keep the new ask** — do not patch prior “inspect this file” when the user says “No, for \<column\>…”.
-15. **Matplotlib server-side charts** — `image_base64` PNGs; UI uses `st.image`.
-16. **Excel: no primary `read_only`** — use `tools/files/excel_reader.py`.
-17. **Hybrid RAG behind `retrieve()`** — preserve public API.
-18. **SQLite only for analytics + memory** — no Redis/Postgres unless requested.
-19. **Docker source mounts + `--reload` for iteration** — recreate on volume changes; rebuild on dependency changes.
-20. **Documentation split** — README = current; DEVELOPMENT_LOG = append-only history.
-21. **SQL Schema Retriever** — never dump the full schema into the LLM prompt; validate against allowlist.
-22. **Specialized Python tools** — never put calculations in the LLM; `PYTHON` is a legacy alias only.
-23. **Prompt Registry is the only prompt loader** — use `PromptManager`; sampling from prompt metadata.
-24. **Supervisor never hardcodes agent names** — capabilities → Registry; register new agents without editing Supervisor.
+12. **Meta file questions never run ADA summaries** — “which file are you reading…” answers from ConversationState filenames.
+13. **Explicit upload / address-package language re-enters ADA** after SOP/SQL; pure SOP glossary still detaches; short “what is X” SOP skips the heavy planner path.
+14. **Shared AttachmentService in API process** — session agents reuse the same upload index.
+15. **Parse-once ADA** — store DataFrame; fresh `analyze_dataframe` per prompt; match real column names from the question.
+16. **Substantive conversation repairs keep the new ask** — do not patch prior “inspect this file” when the user says “No, for \<column\>…”.
+17. **Matplotlib server-side charts** — `image_base64` PNGs; UI uses `st.image`.
+18. **Excel: no primary `read_only`** — use `tools/files/excel_reader.py`.
+19. **Hybrid RAG behind `retrieve()`** — preserve public API.
+20. **SQLite only for analytics + memory** — no Redis/Postgres unless requested.
+21. **Docker source mounts + `--reload` for iteration** — recreate on volume changes; rebuild on dependency changes.
+22. **Documentation split** — README = current; DEVELOPMENT_LOG = append-only history.
+23. **SQL Schema Retriever** — never dump the full schema into the LLM prompt; validate against allowlist.
+24. **Specialized Python tools** — never put calculations in the LLM; `PYTHON` is a legacy alias only.
+25. **Prompt Registry is the only prompt loader** — use `PromptManager`; sampling from prompt metadata.
+26. **Supervisor never hardcodes agent names** — capabilities → Registry; register new agents without editing Supervisor.
 
 ---
 
@@ -606,7 +622,9 @@ These are intentional. Future agents should **not** reverse them without an expl
 - Conversational resolver / state repair / long-term memory
 - Attachment upload + preview + ADA + matplotlib charts + CJK fonts
 - File-column recognition (incl. Chinese) + row-count aggregation
-- Attachment metadata persistence across turns (types / filenames / active sheet)
+- Attachment metadata persistence across turns (types / filenames / active sheet / previous filenames)
+- ADA follow-up intents (address ranking / charts not Executive Summary)
+- Meta vs SOP vs uploaded-file routing (+ short SOP glossary planner bypass; Streamlit ask timeout 300s)
 - Attachment QA skip (no SQL retry overwrite of file answers)
 - Hybrid RAG + Adaptive Retrieval Confidence Engine
 - Evaluation framework + Prompt Experiment Framework
@@ -657,7 +675,7 @@ These are intentional. Future agents should **not** reverse them without an expl
 2. **Read the latest session(s) in `DEVELOPMENT_LOG.md`** for recent decisions and pitfalls.
 3. **Inspect the repository** before coding (`core/`, `tools/`, `agents/`, `prompts/`, `frontend/`, `api/`, `tests/`).
 4. **Continue from the current architecture** — extend modules; do not recreate frameworks.
-5. **Never recreate existing functionality** (router, hybrid RAG, retrieval confidence, attachment/ADA pipeline, excel_reader, charts, classifier, data source selector, clarification, planner, orchestrator, QA, reflection, knowledge graph, Prompt Registry, multi-agent Registry/Supervisor, file-column matching).
+5. **Never recreate existing functionality** (router, hybrid RAG, retrieval confidence, attachment/ADA pipeline, excel_reader, charts, classifier, data source selector, clarification, planner, orchestrator, QA, reflection, knowledge graph, Prompt Registry, multi-agent Registry/Supervisor, file-column matching, attachment metadata persistence, meta/SOP/file routing).
 6. **Extend existing modules** instead of replacing them.
 7. **Keep documentation updated**:
    - Update `README.md` whenever architecture or current state changes.
@@ -669,8 +687,8 @@ These are intentional. Future agents should **not** reverse them without an expl
 12. After `docker-compose.yml` volume changes: `docker compose up -d --force-recreate`. After dependency/Dockerfile changes: rebuild images.
 13. If documentation and code disagree, tell the user before making changes.
 14. Wait for approval before large redesigns unless the user already requested implementation.
-15. When fixing attachment bugs: verify routing (`ATTACHMENT_*`), ADA column match, and that Reflection/QA does not run on file answers.
+15. When fixing attachment bugs: verify routing (`ATTACHMENT_*` vs SOP vs meta), ADA column match / intent (not Executive Summary for ranking/charts), and that Reflection/QA does not run on file answers.
 
 ---
 
-*Last updated: 2026-07-26 — branch `new_feature_1` (attachment metadata persistence across turns).*
+*Last updated: 2026-07-27 — branch `new_feature_1` tip `f8d0be9` (attachment metadata + ADA follow-ups + meta/SOP/file routing; docs refresh).*
