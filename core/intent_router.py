@@ -124,9 +124,34 @@ _SOP_PHRASES = (
     "warehouse process",
     "dispatch process",
     "cbt",
+    "collection by tiktok",
+    "tiktok collection",
+    "collect by tiktok",
     "how do we handle",
     "what is the process",
     "according to sop",
+    "responsible for",
+    "responsibilities",
+    "responsibility",
+    "what should driver",
+    "what should the driver",
+    "what should drivers",
+    "driver duty",
+    "driver duties",
+    "guideline",
+    "guidelines",
+    "playbook",
+    "standard operating",
+)
+
+_SOP_ENTITY_TOKENS = (
+    "cbt",
+    "sop",
+    "tiktok",
+    "collection",
+    "pickup procedure",
+    "check-in",
+    "check in",
 )
 
 _ATTACHMENT_REFERENCE_PHRASES = (
@@ -393,22 +418,23 @@ class IntentRouter:
             or uploaded_file_analytics
             or (attachment_context and _mentions_file_column_analysis(normalized))
         )
-        # Inside a file session, only explicit warehouse/SOP/chat asks detach.
+        # Inside a file session, only explicit warehouse/SOP/chat/knowledge asks detach.
         # Weak SQL-term matching ("delayed" + "pickups") must not steal ADA follow-ups.
         explicit_ops_detach = _is_explicit_ops_db_ask(normalized)
-        # Pure SOP/glossary asks leave the file; file-compare+SOP stays hybrid.
-        pure_sop_detach = bool(
-            _is_sop_question(normalized)
-            and not _attachment_rag_comparison(normalized)
-            and not file_focused
-            and not uploaded_file_analytics
+        # Pure SOP / glossary / knowledge asks leave the file unless the user
+        # also references the upload (hybrid compare stays on ADA).
+        knowledge_detach = _should_detach_for_knowledge_ask(
+            normalized,
+            file_focused=file_focused,
+            uploaded_file_analytics=uploaded_file_analytics,
+            references_attachment=references_attachment,
         )
         prefer_attachment = bool(
             file_focused
             or (
                 file_session
                 and not explicit_ops_detach
-                and not pure_sop_detach
+                and not knowledge_detach
             )
         )
 
@@ -425,6 +451,22 @@ class IntentRouter:
                 chart_type=None,
                 data_sources=[],
             )
+        elif knowledge_detach and (
+            _is_sop_question(normalized) or _is_definitional_knowledge_ask(normalized)
+        ):
+            # Independent capability transition: leave ADA for SOP/knowledge asks.
+            decision = _build_decision(
+                intent=RouteIntent.SOP_QA,
+                confidence=0.94,
+                followup=False,
+                target="SOP Retriever",
+                previous_route=previous_route,
+                attachment_active=False,
+                use_attachments=False,
+                detach_attachments=attachment_active or _route_is_attachment(previous_route),
+                chart_type=None,
+                data_sources=[DataSource.RAG.value],
+            )
         elif prefer_attachment and _attachment_sql_comparison(normalized):
             decision = _attachment_decision(
                 normalized,
@@ -436,7 +478,10 @@ class IntentRouter:
                 hybrid_rag=False,
                 chart_type=chart_type if _is_visualization_request(normalized) else None,
             )
-        elif prefer_attachment and _is_sop_question(normalized) and _attachment_rag_comparison(normalized):
+        elif prefer_attachment and _is_sop_question(normalized) and _attachment_rag_comparison(
+            normalized
+        ):
+            # Hybrid only when the user is comparing the upload against SOP/policy.
             decision = _attachment_decision(
                 normalized,
                 state=state,
@@ -477,6 +522,21 @@ class IntentRouter:
                     hybrid_rag=_attachment_rag_comparison(normalized),
                     chart_type=chart_type if _is_visualization_request(normalized) else None,
                 )
+        elif _is_sop_question(normalized) or _is_procedural_knowledge_ask(normalized):
+            # SOP / procedural knowledge before SQL so "driver responsible" never
+            # falls through to warehouse analytics clarification.
+            decision = _build_decision(
+                intent=RouteIntent.SOP_QA,
+                confidence=0.94,
+                followup=followup,
+                target="SOP Retriever",
+                previous_route=previous_route,
+                attachment_active=False,
+                use_attachments=False,
+                detach_attachments=attachment_active,
+                chart_type=None,
+                data_sources=[DataSource.RAG.value],
+            )
         elif _is_sql_analytics(normalized):
             decision = _build_decision(
                 intent=RouteIntent.SQL_ANALYTICS,
@@ -489,19 +549,6 @@ class IntentRouter:
                 detach_attachments=True,
                 chart_type=chart_type if _is_visualization_request(normalized) else None,
                 data_sources=[DataSource.SQLITE.value],
-            )
-        elif _is_sop_question(normalized):
-            decision = _build_decision(
-                intent=RouteIntent.SOP_QA,
-                confidence=0.94,
-                followup=followup,
-                target="SOP Retriever",
-                previous_route=previous_route,
-                attachment_active=False,
-                use_attachments=False,
-                detach_attachments=attachment_active,
-                chart_type=None,
-                data_sources=[DataSource.RAG.value],
             )
         elif followup and previous_route:
             inherited = _inherit_route(previous_route, normalized, state)
@@ -543,6 +590,21 @@ class IntentRouter:
                 detach_attachments=False,
                 chart_type=None,
                 data_sources=[DataSource.SQLITE.value],
+            )
+        elif _is_knowledge_default_ask(normalized):
+            # Prefer SOP search over SQL for open-ended knowledge asks with no
+            # ranking / metric / time signals (avoids date-range clarification).
+            decision = _build_decision(
+                intent=RouteIntent.SOP_QA,
+                confidence=0.78,
+                followup=False,
+                target="SOP Retriever",
+                previous_route=previous_route,
+                attachment_active=False,
+                use_attachments=False,
+                detach_attachments=attachment_active,
+                chart_type=None,
+                data_sources=[DataSource.RAG.value],
             )
         else:
             decision = _build_decision(
@@ -664,7 +726,54 @@ def _is_explicit_ops_db_ask(normalized: str) -> bool:
 
 
 def _is_sop_question(normalized: str) -> bool:
-    return any(phrase in normalized for phrase in _SOP_PHRASES)
+    if any(phrase in normalized for phrase in _SOP_PHRASES):
+        return True
+    if _is_procedural_knowledge_ask(normalized):
+        return True
+    # "tell me more about CBT / the SOP / TikTok Collection"
+    if re.search(r"\b(tell me more|more about|explain more)\b", normalized):
+        if any(token in normalized for token in _SOP_ENTITY_TOKENS):
+            return True
+    return False
+
+
+def _is_procedural_knowledge_ask(normalized: str) -> bool:
+    """Role / duty / how-to asks that belong in SOP, not SQL analytics."""
+    if re.search(
+        r"\b(responsible for|responsibilities|responsibility|duties|duty)\b",
+        normalized,
+    ):
+        return True
+    if re.search(
+        r"\bwhat should (the )?(driver|drivers|hub|agent|courier|operator)s?\b",
+        normalized,
+    ):
+        return True
+    if re.search(
+        r"\bhow (should|do|does|to)\b.+\b(driver|drivers|pickup|handle|process)\b",
+        normalized,
+    ):
+        return True
+    if re.search(r"\bwhat (is|are) (the )?(driver|drivers).+\b(for|to)\b", normalized):
+        return True
+    return False
+
+
+def _is_knowledge_default_ask(normalized: str) -> bool:
+    """Open knowledge ask without analytics signals — prefer SOP over SQL default."""
+    if _is_explicit_ops_db_ask(normalized) or _is_sql_analytics(normalized):
+        return False
+    if re.search(
+        r"\b(rank|top\s+\d+|bottom\s+\d+|kpi|rate|volume|how many|count|today|"
+        r"yesterday|this week|last week|chart|plot|dashboard)\b",
+        normalized,
+    ):
+        return False
+    if _is_definitional_knowledge_ask(normalized) or _is_procedural_knowledge_ask(normalized):
+        return True
+    if re.search(r"^\s*(what|how|why|who|when)\b", normalized) and len(normalized.split()) <= 14:
+        return True
+    return False
 
 
 def _references_attachment(normalized: str, *, attachment_context: bool = False) -> bool:
@@ -865,7 +974,135 @@ def _attachment_sql_comparison(normalized: str) -> bool:
 
 
 def _attachment_rag_comparison(normalized: str) -> bool:
-    return any(phrase in normalized for phrase in ("sop", "procedure", "policy", "follow our"))
+    """True when the user wants to compare an upload against SOP/policy."""
+    has_policy = any(
+        phrase in normalized for phrase in ("sop", "procedure", "policy", "cbt")
+    )
+    has_compare = any(
+        phrase in normalized
+        for phrase in (
+            "compare",
+            "versus",
+            " vs ",
+            "against",
+            "according to",
+            "follow our",
+            "match the",
+            "with the sop",
+            "with sop",
+        )
+    )
+    return bool(has_policy and has_compare) or "follow our" in normalized
+
+
+def _should_detach_for_knowledge_ask(
+    normalized: str,
+    *,
+    file_focused: bool,
+    uploaded_file_analytics: bool,
+    references_attachment: bool,
+) -> bool:
+    """Detach ADA when the user asks SOP/knowledge/chat with no file reference."""
+    if file_focused or uploaded_file_analytics or references_attachment:
+        return False
+    if _is_sop_question(normalized):
+        return True
+    if _is_definitional_knowledge_ask(normalized):
+        return True
+    return False
+
+
+def _is_definitional_knowledge_ask(normalized: str) -> bool:
+    """Short definitional asks (what is X / define X) that should leave the file."""
+    compact = normalized.strip().rstrip(".?!")
+    tokens = compact.split()
+    if len(tokens) > 16:
+        return False
+    if re.search(r"^\s*what\s+is\s+\w+", normalized):
+        return True
+    if re.search(r"^\s*what\s+does\s+\w+\s+mean", normalized):
+        return True
+    if re.search(r"^\s*define\s+\w+", normalized):
+        return True
+    if "tiktok" in normalized and "collection" in normalized:
+        return True
+    if _is_procedural_knowledge_ask(normalized):
+        return True
+    return False
+
+
+def _explicit_chart_type(normalized: str) -> str | None:
+    """Return an explicitly requested chart type, if any (never inherit previous)."""
+    checks = (
+        ("treemap", "treemap"),
+        ("box plot", "box"),
+        ("boxplot", "box"),
+        ("heatmap", "heatmap"),
+        ("heat map", "heatmap"),
+        ("histogram", "histogram"),
+        ("scatter", "scatter"),
+        ("pie chart", "pie"),
+        (" pie", "pie"),
+        ("line chart", "line"),
+        ("horizontal bar", "horizontal_bar"),
+        ("bar chart", "bar"),
+        ("bar graph", "bar"),
+    )
+    # Prefer longer / more specific phrases; also catch bare "use pie" / "pie please".
+    if re.search(r"\bpie\b", normalized):
+        return "pie"
+    if re.search(r"\b(line chart|line graph|trend chart)\b", normalized) or (
+        re.search(r"\bline\b", normalized) and "chart" in normalized
+    ):
+        return "line"
+    if re.search(r"\bscatter\b", normalized):
+        return "scatter"
+    if re.search(r"\bhistogram\b", normalized):
+        return "histogram"
+    if "heat map" in normalized or "heatmap" in normalized:
+        return "heatmap"
+    if "box plot" in normalized or "boxplot" in normalized:
+        return "box"
+    if "treemap" in normalized or "tree map" in normalized:
+        return "treemap"
+    if "horizontal bar" in normalized:
+        return "horizontal_bar"
+    if re.search(r"\bbar chart\b|\bbar graph\b", normalized) or (
+        re.search(r"\bbar\b", normalized) and "chart" in normalized
+    ):
+        return "bar"
+    for phrase, chart_type in checks:
+        if phrase in normalized:
+            return chart_type
+    return None
+
+
+def _detect_chart_type(normalized: str, state: dict[str, Any]) -> str | None:
+    """Detect chart type for this turn only — explicit requests always win."""
+    if not _is_visualization_request(normalized):
+        return None
+
+    explicit = _explicit_chart_type(normalized)
+    if explicit:
+        return explicit
+
+    # Heuristics from the current question only (do not inherit last_topic /
+    # last_visualization — that locked conversations onto bar charts).
+    if any(word in normalized for word in ("rank", "ranking", "top", "bottom", "worst", "best")):
+        return "horizontal_bar"
+    if any(word in normalized for word in ("trend", "over time", "time series", "daily", "weekly")):
+        return "line"
+    if any(word in normalized for word in ("distribution", "histogram", "spread")):
+        return "histogram"
+    if any(word in normalized for word in ("percent", "percentage", "share", "proportion")):
+        return "pie"
+    if any(word in normalized for word in ("correlation", "relationship", "versus")):
+        return "scatter"
+    if any(word in normalized for word in ("heatmap", "matrix", "heat map")):
+        return "heatmap"
+    if any(word in normalized for word in ("compare", "comparison", "by hub", "by driver", "category")):
+        return "bar"
+    return "bar"
 
 
 def _attachment_data_sources(
@@ -941,30 +1178,6 @@ def _inherit_route(
         "detach_attachments": True,
         "data_sources": [DataSource.SQLITE.value],
     }
-
-
-def _detect_chart_type(normalized: str, state: dict[str, Any]) -> str | None:
-    if not _is_visualization_request(normalized):
-        return None
-
-    last_topic = (state.get("last_topic") or state.get("last_intent") or "").lower()
-    combined = f"{normalized} {last_topic}"
-
-    if any(word in combined for word in ("rank", "ranking", "top", "bottom", "worst", "best")):
-        return "horizontal_bar"
-    if any(word in combined for word in ("trend", "over time", "time series", "daily", "weekly")):
-        return "line"
-    if any(word in combined for word in ("distribution", "histogram", "spread")):
-        return "histogram"
-    if any(word in combined for word in ("percent", "percentage", "share", "proportion")):
-        return "pie"
-    if any(word in combined for word in ("correlation", "relationship", "versus")):
-        return "scatter"
-    if any(word in combined for word in ("heatmap", "matrix", "heat map")):
-        return "heatmap"
-    if any(word in combined for word in ("compare", "comparison", "by hub", "by driver", "category")):
-        return "bar"
-    return "bar"
 
 
 def _log_decision(decision: RouteDecision) -> None:

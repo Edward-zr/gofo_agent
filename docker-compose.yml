@@ -15,6 +15,7 @@ services:
       - ./core:/app/core
       - ./tools:/app/tools
       - ./agents:/app/agents
+      - ./graph:/app/graph
       - ./prompts:/app/prompts
       - ./frontend:/app/frontend
       - ./config.py:/app/config.py
@@ -42,6 +43,7 @@ services:
       - ./core:/app/core
       - ./tools:/app/tools
       - ./agents:/app/agents
+      - ./graph:/app/graph
       - ./prompts:/app/prompts
       - ./frontend:/app/frontend
       - ./config.py:/app/config.py

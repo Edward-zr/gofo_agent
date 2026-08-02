@@ -21,7 +21,7 @@ from tools.memory.database import get_connection
 logger = get_logger("api")
 
 app = FastAPI(
-    title="GOFO Operations Intelligence Agent",
+    title="Operations Intelligence Agent",
     description="HTTP API for the GOFO Operations Intelligence Dashboard.",
     version="1.0.0",
 )
@@ -31,12 +31,44 @@ attachment_service = AttachmentService()
 
 def _create_session_agent() -> GOFOAgent:
     """Create a session agent that shares the API attachment store."""
+    import config
+
+    if config.LANGGRAPH_ENABLED:
+        from graph.runtime import LangGraphGOFOAgent
+
+        session_agent = LangGraphGOFOAgent(GOFOAgent(), thread_id="pending")
+        session_agent.attachment_service = attachment_service
+        return session_agent  # type: ignore[return-value]
+
     session_agent = GOFOAgent()
     session_agent.attachment_service = attachment_service
     return session_agent
 
 
-session_manager = SessionManager(agent_factory=_create_session_agent)
+# SessionManager needs thread_id per session — wrap factory.
+class _LangGraphAwareSessionManager(SessionManager):
+    """Session manager that sets LangGraph thread_id to the API session_id."""
+
+    def get_session(self, session_id: str | None = None):
+        normalized = (session_id or "default").strip() or "default"
+        with self._lock:
+            if normalized not in self._sessions:
+                import config
+
+                agent = GOFOAgent()
+                agent.attachment_service = attachment_service
+                if config.LANGGRAPH_ENABLED:
+                    from graph.runtime import LangGraphGOFOAgent
+
+                    wrapped = LangGraphGOFOAgent(agent, thread_id=normalized)
+                    wrapped.attachment_service = attachment_service
+                    self._sessions[normalized] = wrapped  # type: ignore[assignment]
+                else:
+                    self._sessions[normalized] = agent
+            return self._sessions[normalized]
+
+
+session_manager = _LangGraphAwareSessionManager(agent_factory=_create_session_agent)
 agent = session_manager.get_session("default")
 
 

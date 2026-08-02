@@ -29,12 +29,12 @@ Give operations users one chat surface for:
 
 | Item | Value |
 |------|--------|
-| **Branch tip** | `8bf72fe` — *Keep uploaded-file analysis on real columns, including Chinese headers.* |
-| **Prior tip** | `74924e2` — Prompt Registry + Multi-Agent Supervisor |
-| **Tests** | **385** collected (`pytest --collect-only`) |
+| **Branch tip** | Planner-driven LangGraph loop on `add_langgraph_react_harness` (uncommitted until requested) |
+| **Prior tip** | Supervisor transition fixes + Phase-1 nested-ask graph |
+| **Tests** | TaskSpec/verifier + LangGraph loop suite green; full suite still defaults LangGraph **off** |
 | **Runtime** | FastAPI `:8000` + Streamlit `:8501` via Docker Compose (`--reload` + source mounts) |
 
-Completed control plane: Intent Classifier → Data Source Selection → Planner → Clarification → Supervisor/Orchestrator → Generator → Reflection/QA (skipped for file ADA). Latest hardening: attachment session stays on uploaded columns; conversation repair no longer rewrites file-column asks into summary prompts; **attachment metadata persists across turns** so ADA follow-ups keep working when `attachment_active` flickers false.
+Completed control plane: Intent Classifier → Data Source Selection → Planner → Clarification → Supervisor/Orchestrator → Generator → Reflection/QA (skipped for file ADA). **Optional LangGraph orchestration** (`graph/`) now runs a **six-stage planner-driven loop** (intent → decompose → plan → execute → verify → one re-plan) via `PlanExecutor` — **no nested `GOFOAgent.ask`** on that path. Default remains `LANGGRAPH_ENABLED=false` (legacy `ask`). Attachment session / IntentRouter detach+chart fixes remain Stage-1 source of truth.
 
 ---
 
@@ -42,10 +42,10 @@ Completed control plane: Intent Classifier → Data Source Selection → Planner
 
 | Item | Value |
 |------|--------|
-| **Current branch** | `new_feature_1` |
+| **Current branch** | `add_langgraph_react_harness` (from `new_feature_1`) |
 | **Tracks** | `origin/new_feature_1` |
 | **Base** | Evolved from `cursor-memory-version` / early `main` checkpoint history |
-| **Purpose** | Ship conversational GOFO intelligence with durable docs, multi-step planning, multi-agent dispatch, Prompt Registry, and reliable uploaded-file ADA |
+| **Purpose** | Ship conversational GOFO intelligence with durable docs, multi-step planning, multi-agent dispatch, Prompt Registry, reliable uploaded-file ADA, and optional LangGraph orchestration |
 
 ## Major Differences from `main`
 
@@ -68,6 +68,7 @@ Relative to the early `main` checkpoint, this line of development adds:
 15. **Excel robustness** — shared `excel_reader` (no primary openpyxl `read_only`)
 16. **Docker source mounts + CJK fonts** — live iteration; Chinese chart labels
 17. **Documentation split** — README = current state; DEVELOPMENT_LOG = append-only history
+18. **Optional LangGraph orchestration** — planner-driven six-stage loop, shared `AgentState`, MemorySaver checkpoints; `PlanExecutor` (no nested `ask`)
 
 ---
 
@@ -77,20 +78,18 @@ Relative to the early `main` checkpoint, this line of development adds:
 
 ```text
 User (Streamlit / CLI)
-  → FastAPI (session_id → SessionManager → GOFOAgent)
+  → FastAPI (session_id → SessionManager → GOFOAgent | LangGraphGOFOAgent)
   → optional POST /attachments → AttachmentService.upload
-  → IntentClassifier.classify(question, ConversationMemory)
-  → IntentRouter.route(...)          # attachment activate/detach + WAIT_FOR_UPLOAD
-                                     # file-column / for-each asks stay on ATTACHMENT_*
-  → (if planner path) DataSourceSelector → Planner → ClarificationManager
-       → Supervisor / Agent Registry   # MULTI_AGENT_ENABLED (default true)
-       → else ToolOrchestrator / PlanExecutor
-  → (if attachment path) RouteDispatcher → analyze_attachments / ADA
-       → detect_analysis_intent → analyze_dataframe (real columns)
-       → charts.build_charts (matplotlib PNG base64)
-  → Reflection/QA ONLY if _should_run_qa(...)  # SKIPPED for ATTACHMENT_* / file_*
-  → ConversationMemory + ConversationState + AttachmentMemory update
-  → AskResponse (answer, sql, data, kpi, charts, sources, plan, reflection, agent_state)
+  → [if LANGGRAPH_ENABLED] LangGraph frontier + planner loop:
+       prepare → intent_understanding → frontier
+         → (not meaningful → finalize)
+         → task_decomposition → planner → tool_execution → verify
+         → (replan once) → summarize → finalize
+       Frontier order: SOP searchable? → ADA/analysis? → SQL/Python tools
+       (PlanExecutor only — no nested ask)
+  → [else] GOFOAgent.ask legacy path:
+       IntentClassifier → IntentRouter → Planner/Dispatcher → Reflection/QA → Memory
+  → AskResponse (answer, sql, data, kpi, charts, sources, plan, verification_report, …)
   → Streamlit renders text + KPI + chart PNGs
 ```
 
@@ -100,15 +99,58 @@ User (Streamlit / CLI)
 |------|--------|----------------|
 | Classify | `IntentClassifier` | *What* the user wants |
 | Select sources | `DataSourceSelector` | *Which* data sources (min set) |
+| Decompose | `core/task_decomposition.py` | Structured `TaskSpec` constraints (LangGraph Stage 2) |
 | Plan | `Planner` | *What steps* (never executes); emits capabilities |
 | Clarify | `ClarificationManager` | *Ask* for missing business params before tools |
 | Supervise | `SupervisorAgent` + `AgentRegistry` | *Which agents* by capability; dispatch/merge |
-| Orchestrate | `ToolOrchestrator` | Legacy *how* when `MULTI_AGENT_ENABLED=false` |
-| Critique | `ReflectionAgent` + QA | Evaluate draft SQL/RAG answers (**not** file ADA) |
+| Orchestrate | `ToolOrchestrator` / `PlanExecutor` | Execute plan steps |
+| Verify | `core/request_verifier.py` | Checklist vs TaskSpec; **SOP never SQL-retries** |
+| Graph orchestrate | `graph/` (LangGraph) | Optional six-stage loop + checkpoints |
+| Critique | `ReflectionAgent` + QA | Evaluate draft SQL/RAG answers on **legacy ask** path |
 | Route (session) | `IntentRouter` / `RouteDispatcher` | Attachment session + single-route fallback |
 | ADA | `tools/files/*` | Parse-once DataFrame; per-prompt analysis |
 
-There is **no LangGraph** dependency. Stages are modular so a future graph could wrap the same modules.
+## LangGraph Orchestration (optional migration layer)
+
+LangGraph owns the **full planner-driven lifecycle** when `LANGGRAPH_ENABLED=true`. Business tools stay in `core/` and `tools/`. Legacy `GOFOAgent.ask` remains the default.
+
+```text
+START → prepare → intent_understanding → frontier
+          ├─(not meaningful)→ finalize → END
+          └─→ task_decomposition → planner
+                ├─(clarify)→ finalize → END
+                └─→ tool_execution → result_verification
+                      ├─(fail, retries left)→ replan → tool_execution → …
+                      └─→ summarize → finalize → END
+```
+
+| Stage | Node | Role |
+|-------|------|------|
+| Prepare | `prepare` | Attachments + hydrate session |
+| Intent | `intent_understanding` | Repair + IntentRouter + capability transitions |
+| Frontier | `frontier` | SOP searchable? → ADA/analysis? → tools or not meaningful |
+| Decompose | `task_decomposition` | `TaskSpec` (limit, chart_type, domain, …) |
+| Plan | `planner` | Always `Planner.plan`; ClarificationManager may skip tools |
+| Execute | `tool_execution` | `PlanExecutor` / SupervisorAgent only |
+| Verify | `result_verification` | vs TaskSpec; SOP-safe (no SQL retry) |
+| Re-plan | `replan` | `Planner.plan_retry` **once** max |
+| Summarize | `summarize` | Frontier presents sub-agent result to the user |
+
+| Piece | Path | Role |
+|-------|------|------|
+| Shared state | `graph/state.py` | Typed `AgentState` + `task_spec` / verification facets |
+| Nodes | `graph/nodes.py` | Six-stage loop nodes |
+| Execution | `graph/execution.py` | Plan + memory/format **without** nested `ask` |
+| Tools adapters | `graph/tools.py` | Thin wrappers: `classify_route`, repair, sync |
+| Builder | `graph/builder.py` | `StateGraph` compile + optional `MemorySaver` |
+| Runtime | `graph/runtime.py` | `LangGraphGOFOAgent.ask()` — same signature as `GOFOAgent.ask` |
+| Observability | `graph/observability.py` | Timed node enter/exit; structured errors |
+
+**Flags:** `LANGGRAPH_ENABLED` (default **false**), `LANGGRAPH_ROUTED_NODES` (retained; loop is universal), `LANGGRAPH_CHECKPOINTING`, `LANGGRAPH_DEBUG`, `LANGGRAPH_TRACING` (LangSmith via env).
+
+**Enable for Docker/UI testing:** set `LANGGRAPH_ENABLED=true` in `.env` / compose; leave `false` in production until validated.
+
+Docker Compose mounts `./graph:/app/graph` so live reload picks up graph changes.
 
 ## Frontend
 
@@ -135,11 +177,13 @@ Frontend talks only to FastAPI (`API_BASE_URL`, default `http://localhost:8000`)
 
 | Component | Path | Role |
 |-----------|------|------|
-| Agent facade | `core/agent.py` | `GOFOAgent.ask()` — full pipeline; `_should_run_qa` skips file routes |
+| Agent facade | `core/agent.py` | `GOFOAgent.ask()` — legacy full pipeline; `_should_run_qa` skips file routes |
 | Intent classifier | `core/intent_classifier.py` | Primary intent + tool flags + confidence |
+| Task decomposition | `core/task_decomposition.py` | `TaskSpec` constraints for LangGraph Stage 2 |
 | Data source selector | `core/data_source_selector.py` | Minimum SQL/KG/RAG/Memory/Python sources |
 | Planner | `core/planner.py` | Multi-step `ExecutionPlan` / `plan_retry` |
 | Plan executor | `core/plan_executor.py` | Supervisor when multi-agent on; else ToolOrchestrator |
+| Request verifier | `core/request_verifier.py` | TaskSpec checklist; SOP-safe (no SQL retry) |
 | Tool orchestrator | `core/tool_orchestrator.py` | Parallel waves, deps, AgentState |
 | Quality assurance | `core/quality_assurance.py` | Evidence / reasoning / completeness; `is_file_capability()` |
 | Reflection | `core/reflection.py` | Self-critique API for Planner retries |
@@ -287,7 +331,8 @@ Sits **after Planner, before tool execution**. Asks for missing metric / scope /
 
 - **OpenAI** — chat (`LLM_MODEL`, default `gpt-4o-mini`) and embeddings
 - **Hugging Face / sentence-transformers** — local reranker
-- No Slack/Lark/Redis/Snowflake/LangGraph unless explicitly requested
+- **LangGraph / LangSmith (optional)** — orchestration + tracing when `LANGGRAPH_*` flags are on
+- No Slack/Lark/Redis/Snowflake unless explicitly requested
 
 ---
 
@@ -297,6 +342,7 @@ Sits **after Planner, before tool execution**. Asks for missing metric / scope /
 gofo_agent/
 ├── api/                 # FastAPI HTTP layer
 ├── agents/              # Multi-agent: Supervisor, Registry, specialized agents
+├── graph/               # Optional LangGraph orchestration (AgentState, nodes, checkpoints)
 ├── core/                # Agent control plane + Prompt Registry
 ├── prompts/             # Versioned prompt assets (registry.yaml per family)
 ├── frontend/            # Primary Streamlit UI + attachment preview
@@ -353,6 +399,9 @@ gofo_agent/
 | `core/prompt_manager.py` / `prompt_registry.py` | Prompt load/render/invoke |
 | `core/route_dispatcher.py` | ATTACHMENT_* → ADA |
 | `core/clarification_manager.py` | Ask before tools |
+| `core/task_decomposition.py` | TaskSpec for LangGraph Stage 2 |
+| `core/request_verifier.py` | Verification vs TaskSpec (SOP-safe) |
+| `graph/execution.py` | PlanExecutor + memory/format (no nested ask) |
 | `tools/files/data_analysis.py` | Column match + aggregation / ranking / summary |
 | `tools/files/analysis_intent.py` | Per-prompt ADA intent (AGGREGATION, VISUALIZE, …) |
 | `tools/files/analyzer.py` | Prefer original wording for file analysis |
@@ -405,6 +454,7 @@ gofo_agent/
 | CLI | Local debug REPL | `cli/`, `query.py` | **Complete** |
 | Docker Compose | API :8000 + UI :8501, `--reload`, mounts | `Dockerfile`, `docker-compose.yml` | **Complete** |
 | Evaluation framework | Benchmark + scenarios + prompt experiments | `evaluation/` | **Complete** |
+| LangGraph orchestration | Six-stage planner-driven loop + AgentState + checkpoints; PlanExecutor (no nested ask) | `graph/` + `core/task_decomposition.py` + `core/request_verifier.py` | **Complete (planner-driven)** |
 
 ---
 
@@ -420,7 +470,7 @@ gofo_agent/
 | **Reranker** | `sentence-transformers` + `BAAI/bge-reranker-base` |
 | **RAG store** | ChromaDB |
 | **Sparse retrieval** | `rank-bm25` |
-| **Orchestration libs** | LangChain OpenAI wrappers (**not** LangGraph) |
+| **Orchestration libs** | LangChain OpenAI wrappers; **optional LangGraph** (`graph/`, off by default) |
 | **Data** | pandas, openpyxl, pypdf, python-docx, Pillow |
 | **Charts** | matplotlib (Agg → PNG base64) |
 | **Analytics DB** | SQLite (`data/gofo_demo.db`) |
@@ -490,6 +540,10 @@ Copy from `.env.example`. Critical keys:
 | `TOOL_ORCHESTRATOR_*` | Plan execution |
 | `PROMPT_REGISTRY_DIR` / `PROMPT_HOT_RELOAD` / `PROMPT_DEBUG` / `PROMPT_EXPERIMENT` | Prompt Registry |
 | `MULTI_AGENT_ENABLED` / `MULTI_AGENT_PARALLEL` / `MULTI_AGENT_DEBUG` | Supervisor path |
+| `LANGGRAPH_ENABLED` | Wrap sessions in `LangGraphGOFOAgent` (default **false**) |
+| `LANGGRAPH_ROUTED_NODES` | Supervisor → ada/sql/rag/chat nodes (vs single legacy node) |
+| `LANGGRAPH_CHECKPOINTING` | In-memory `MemorySaver` per thread/session |
+| `LANGGRAPH_DEBUG` / `LANGGRAPH_TRACING` | Verbose node logs / LangSmith tracing |
 | `API_BASE_URL` | Streamlit → API |
 | `MPLCONFIGDIR` | Writable matplotlib cache (Compose: `/tmp/matplotlib`) |
 
@@ -571,7 +625,7 @@ Reports land under `evaluation/results/`.
 
 These are intentional. Future agents should **not** reverse them without an explicit product request.
 
-1. **Modular control plane, optional multi-agent** — one `GOFOAgent` facade; Supervisor/Registry when `MULTI_AGENT_ENABLED`; no LangGraph.
+1. **Modular control plane, optional multi-agent, optional LangGraph** — one `GOFOAgent` facade; Supervisor/Registry when `MULTI_AGENT_ENABLED`; LangGraph wraps the same agent when `LANGGRAPH_ENABLED` (default off). Do not rewrite tools into the graph.
 2. **Thin API/UI** — intelligence lives under `core/`, `tools/`, `agents/`.
 3. **Classify → Select sources → Plan → Clarify → Supervise/Orchestrate → Critique** — do not collapse Planner into Executor or let critics write final answers.
 4. **Planner never executes tools; Orchestrator/Supervisor never invent plans; DataSourceSelector never executes.**
@@ -617,12 +671,16 @@ These are intentional. Future agents should **not** reverse them without an expl
 - Specialized Python analytics tools
 - Quality Assurance + Reflection with bounded retries
 - Documentation refresh for durable Cursor memory
+- Optional LangGraph planner-driven loop (`graph/`) with AgentState, TaskSpec, verifier, MemorySaver checkpoints
+- LangGraph: single Conversation Repair + Intent Routing authority; PlanExecutor execution (no nested `ask`)
+- IntentRouter detach/chart transition hardening (SOP after ADA; explicit pie/line)
 
 ## In Progress
 
 - Broader PlanExecutor coverage for Follow_Up / Upload_File without regressing repair
 - Hardening chart defaults for high-cardinality Chinese address columns
 - Clear stale attachment/DataFrame caches on re-upload in long-lived Docker sessions
+- LangGraph: durable checkpointer / LangSmith beyond existing flags; default-on only after UI soak
 
 ## Planned Features
 
@@ -633,6 +691,7 @@ These are intentional. Future agents should **not** reverse them without an expl
 - Cloud deploy configs
 - Snowflake / warehouse executor if requested
 - Observability metrics beyond file logs
+- Durable SQLite/Postgres LangGraph checkpointer (beyond in-memory MemorySaver)
 - Optional Plotly interactive charts only if product asks (keep matplotlib default)
 - CI GitHub Action running `pytest` on push
 
@@ -655,22 +714,23 @@ These are intentional. Future agents should **not** reverse them without an expl
 
 1. **Read `README.md` first** (this file).
 2. **Read the latest session(s) in `DEVELOPMENT_LOG.md`** for recent decisions and pitfalls.
-3. **Inspect the repository** before coding (`core/`, `tools/`, `agents/`, `prompts/`, `frontend/`, `api/`, `tests/`).
+3. **Inspect the repository** before coding (`core/`, `tools/`, `agents/`, `graph/`, `prompts/`, `frontend/`, `api/`, `tests/`).
 4. **Continue from the current architecture** — extend modules; do not recreate frameworks.
-5. **Never recreate existing functionality** (router, hybrid RAG, retrieval confidence, attachment/ADA pipeline, excel_reader, charts, classifier, data source selector, clarification, planner, orchestrator, QA, reflection, knowledge graph, Prompt Registry, multi-agent Registry/Supervisor, file-column matching).
+5. **Never recreate existing functionality** (router, hybrid RAG, retrieval confidence, attachment/ADA pipeline, excel_reader, charts, classifier, data source selector, clarification, planner, orchestrator, QA, reflection, knowledge graph, Prompt Registry, multi-agent Registry/Supervisor, file-column matching, LangGraph `graph/` wrappers).
 6. **Extend existing modules** instead of replacing them.
 7. **Keep documentation updated**:
    - Update `README.md` whenever architecture or current state changes.
    - **Append** a new dated session to `DEVELOPMENT_LOG.md` (never overwrite history).
 8. Preserve modular tool boundaries; keep API/UI thin.
-9. Do not add Redis, LangGraph, or new databases unless the user explicitly asks. Multi-agent already exists under `agents/` — extend via Registry, do not invent a second framework.
+9. Do not add Redis or new databases unless the user explicitly asks. Multi-agent lives under `agents/`; LangGraph orchestration lives under `graph/` — extend those packages, do not invent a second framework.
 10. Never log or commit real API keys.
 11. Run `pytest tests/ -q` after substantive changes.
 12. After `docker-compose.yml` volume changes: `docker compose up -d --force-recreate`. After dependency/Dockerfile changes: rebuild images.
 13. If documentation and code disagree, tell the user before making changes.
 14. Wait for approval before large redesigns unless the user already requested implementation.
 15. When fixing attachment bugs: verify routing (`ATTACHMENT_*`), ADA column match, and that Reflection/QA does not run on file answers.
+16. When changing LangGraph: keep `LANGGRAPH_ENABLED` default false; preserve legacy `GOFOAgent.ask`; do not expose `reasoning_trace` to end users; verifier must never SQL-retry SOP/RAG.
 
 ---
 
-*Last updated: 2026-07-26 — branch `new_feature_1` (attachment metadata persistence across turns).*
+*Last updated: 2026-08-02 — SOP misroute fixes + frontier SOP→ADA/SQL decision tree.*

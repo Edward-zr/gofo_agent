@@ -151,6 +151,15 @@ _SOP_PHRASES = (
     "check-in",
     "exception handling",
     "cbt",
+    "responsible for",
+    "responsibilities",
+    "guideline",
+    "guidelines",
+    "playbook",
+    "tiktok collection",
+    "collection by tiktok",
+    "what should driver",
+    "what should the driver",
 )
 
 _SQL_ANALYSIS_PHRASES = (
@@ -323,6 +332,41 @@ def _enforce_confidence(classification: IntentClassification) -> IntentClassific
     return classification
 
 
+def _is_procedural_sop_ask(normalized: str) -> bool:
+    if re.search(
+        r"\b(responsible for|responsibilities|responsibility|duties|duty)\b",
+        normalized,
+    ):
+        return True
+    if re.search(
+        r"\bwhat should (the )?(driver|drivers|hub|agent|courier|operator)s?\b",
+        normalized,
+    ):
+        return True
+    if re.search(r"\b(tell me more|more about)\b", normalized) and any(
+        token in normalized for token in ("cbt", "sop", "tiktok", "procedure", "policy")
+    ):
+        return True
+    return False
+
+
+def _prior_turn_was_sop(history: list[dict[str, Any]]) -> bool:
+    if not history:
+        return False
+    last = history[-1] or {}
+    for key in ("intent", "classifier_intent", "route_intent", "capability"):
+        value = str(last.get(key) or "").lower()
+        if "sop" in value or value == "rag":
+            return True
+    answer = str(last.get("assistant_answer") or last.get("answer") or "").lower()
+    question = str(last.get("user_question") or last.get("question") or "").lower()
+    if any(token in question for token in ("cbt", "sop", "procedure", "policy", "tiktok")):
+        return True
+    if "based on the available sop" in answer or "sop documentation" in answer:
+        return True
+    return False
+
+
 def _looks_like_followup(normalized: str, has_history: bool) -> bool:
     if not has_history:
         return False
@@ -373,22 +417,6 @@ def _heuristic_classify(
             )
         )
 
-    if _looks_like_followup(normalized, has_history):
-        explain = any(
-            phrase in normalized
-            for phrase in ("explain", "why is this", "why are these", "these numbers", "this chart")
-        )
-        intent = IntentType.Explain_Result if explain and has_history else IntentType.Follow_Up
-        return _apply_defaults(
-            IntentClassification(
-                intent=intent,
-                confidence=0.93,
-                requires_memory=True,
-                requires_planner=True,
-                reasoning="Short conversational follow-up with prior turns.",
-            )
-        )
-
     if any(phrase in normalized for phrase in _UPLOAD_PHRASES) or re.search(
         r"\b(csv|xlsx|xls|pdf|docx)\b", normalized
     ):
@@ -418,7 +446,11 @@ def _heuristic_classify(
             )
         )
 
-    sop_hit = any(phrase in normalized for phrase in _SOP_PHRASES)
+    # SOP / procedural knowledge before follow-up so "tell me more about CBT"
+    # and "what should driver do" never become Unknown → SQL date clarification.
+    sop_hit = any(phrase in normalized for phrase in _SOP_PHRASES) or _is_procedural_sop_ask(
+        normalized
+    )
     if sop_hit:
         if "compare" in normalized or " vs " in normalized or "versus" in normalized:
             intent = IntentType.SOP_Compare
@@ -430,7 +462,36 @@ def _heuristic_classify(
             IntentClassification(
                 intent=intent,
                 confidence=0.92,
-                reasoning="SOP / policy phrasing.",
+                reasoning="SOP / policy / procedural phrasing.",
+            )
+        )
+
+    if _looks_like_followup(normalized, has_history):
+        # Bare "tell me more" after SOP history → keep SOP family, not Unknown.
+        prior_sop = _prior_turn_was_sop(history)
+        explain = any(
+            phrase in normalized
+            for phrase in ("explain", "why is this", "why are these", "these numbers", "this chart")
+        )
+        if prior_sop and not explain:
+            return _apply_defaults(
+                IntentClassification(
+                    intent=IntentType.SOP_QA,
+                    confidence=0.9,
+                    requires_memory=True,
+                    requires_rag=True,
+                    requires_planner=True,
+                    reasoning="Follow-up after SOP turn — continue SOP retrieval.",
+                )
+            )
+        intent = IntentType.Explain_Result if explain and has_history else IntentType.Follow_Up
+        return _apply_defaults(
+            IntentClassification(
+                intent=intent,
+                confidence=0.93,
+                requires_memory=True,
+                requires_planner=True,
+                reasoning="Short conversational follow-up with prior turns.",
             )
         )
 

@@ -1872,3 +1872,277 @@ Separately, `_ranking` required a real `package_count` column; waybill files wit
 
 *End of session 2026-07-26 (Distinguish meta / SOP / uploaded-file analytics routing).*
 
+
+---
+
+# Session 2026-07-27 — LangGraph orchestration migration (stages 1–2)
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-27 |
+| **Branch** | `add_langgraph_react_harness` (based on `new_feature_1`) |
+| **Overall objective** | Migrate orchestration to LangGraph (ReAct supervisor, AgentState, checkpointing, observability) without rewriting tools, APIs, UI, or prompts |
+| **Tests** | `tests/test_langgraph_orchestration.py` — **10 passed**; existing suite keeps `LANGGRAPH_ENABLED=false` via conftest |
+
+---
+
+## Approach (migration, not rewrite)
+
+1. Keep `GOFOAgent.ask` as the source of truth for SQL / RAG / ADA / chat / repair / QA.
+2. Add `graph/` as an optional outer control plane: state, routing, retries/errors, checkpoints.
+3. Default **off** (`LANGGRAPH_ENABLED=false`) so production behavior and the full pytest suite stay unchanged.
+4. When enabled, FastAPI sessions use `LangGraphGOFOAgent` with the same `ask()` signature.
+
+## Architecture delivered
+
+```text
+START → prepare → conversation_repair → supervisor
+  → ada | sql | rag | chat | wait_upload | legacy_execute
+  → reflection → finalize → END
+```
+
+| Module | Role |
+|--------|------|
+| `graph/state.py` | Typed `AgentState` (messages, intent, attachment metadata, tool histories, `final_answer`, timings, …) |
+| `graph/nodes.py` | Graph nodes; ReAct supervisor; tool nodes wrap `GOFOAgent.ask` |
+| `graph/tools.py` | `classify_route`, `run_legacy_ask`, `sync_state_from_agent` |
+| `graph/builder.py` | Compile `StateGraph`; optional `MemorySaver` |
+| `graph/runtime.py` | `LangGraphGOFOAgent` session facade |
+| `graph/observability.py` | Timed enter/exit; structured node errors |
+
+## Feature flags
+
+| Flag | Default | Purpose |
+|------|---------|---------|
+| `LANGGRAPH_ENABLED` | false | Wrap API sessions in LangGraph |
+| `LANGGRAPH_ROUTED_NODES` | true | Supervisor → tool nodes (vs single legacy node) |
+| `LANGGRAPH_CHECKPOINTING` | true | In-memory checkpoints per `thread_id` / session |
+| `LANGGRAPH_DEBUG` | false | Verbose state/update logging |
+| `LANGGRAPH_TRACING` | false | Request LangSmith via env |
+
+## Key behaviors preserved
+
+- REST API + Streamlit unchanged
+- Attachment metadata still synced from `ConversationState` into graph state each turn
+- File ADA / SQL / RAG / chat still execute through existing modules
+- SQL+RAG multi-source → `legacy_execute` (planner merge) until stage 3 tool nodes
+- Internal `reasoning_trace` never exposed as the user-facing answer
+- Tool failures become structured errors; finalize returns a safe recovery message
+
+## Files touched
+
+| File | Why |
+|------|-----|
+| `graph/**` | New LangGraph package |
+| `config.py` / `.env.example` | LangGraph flags |
+| `requirements.txt` | `langgraph>=0.2.0` |
+| `api/server.py` | Session wrap when enabled |
+| `docker-compose.yml` | Mount `./graph` |
+| `tests/conftest.py` | Autouse disable LangGraph |
+| `tests/test_langgraph_orchestration.py` | Graph / checkpoint / error / multi-source tests |
+| `README.md` / `DEVELOPMENT_LOG.md` | Architecture + migration docs |
+
+## Next migration stage (not done here)
+
+- Tool nodes call `RouteDispatcher` / SQL / RAG / ADA adapters **directly** (no nested `ask`)
+- True sequential multi-tool waves inside the graph with a merge node
+- Durable checkpointer (SQLite) if product needs cross-process resume
+
+---
+
+*End of session 2026-07-27 (LangGraph orchestration migration stages 1–2).*
+
+---
+
+# Session 2026-07-29 — LangGraph Phase 1 (single repair + routing authority)
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-29 |
+| **Branch** | `add_langgraph_react_harness` |
+| **Objective** | Eliminate duplicated Conversation Repair and Intent Routing when LangGraph is enabled |
+| **Tests** | `tests/test_langgraph_orchestration.py` — **13 passed** |
+
+---
+
+## Problem
+
+With LangGraph enabled, each turn ran:
+
+1. Graph `conversation_repair` → ConversationResolver
+2. Graph `supervisor` → IntentRouter
+3. Nested `GOFOAgent.ask` → ConversationResolver **again** + IntentRouter **again**
+
+## Solution (Phase 1)
+
+1. **LangGraph owns repair** — `run_conversation_repair` stores `resolved_question`, `repair_*`, full `conversation_resolution` in `AgentState`.
+2. **LangGraph owns routing** — supervisor always runs (even when `LANGGRAPH_ROUTED_NODES=false`); stores `route_decision`, applies activate/detach once.
+3. **`GOFOAgent.ask(pre_routed=True, ...)`** — skips ConversationResolver + IntentRouter; reuses supplied resolution/route; locks `resolved_question` against semantic/memory rewrite.
+4. Planner / PlanExecutor / RouteDispatcher / Reflection / QA / Memory **unchanged**.
+5. When `LANGGRAPH_ENABLED=false`, `ask()` behavior is unchanged (CLI path).
+
+## Log flow (LangGraph on)
+
+```text
+Conversation Repair
+↓
+Intent Router
+↓
+GOFOAgent (pre-routed)
+```
+
+## Files
+
+| File | Change |
+|------|--------|
+| `core/agent.py` | `ask(..., pre_routed=..., route_decision=..., ...)` |
+| `graph/state.py` | repair + resolution + `pre_routed` fields |
+| `graph/tools.py` | `run_conversation_repair`, pre-routed `run_legacy_ask` |
+| `graph/nodes.py` / `builder.py` | Always supervisor → tools with pre-routed handoff |
+| `tools/conversation/resolver.py` | `resolution_to_dict` / `resolution_from_dict` |
+| `tests/test_langgraph_orchestration.py` | CBT once-each + pre_routed skip tests |
+| `README.md` / `DEVELOPMENT_LOG.md` | Phase 1 docs |
+
+## Next
+
+Phase 2 — tool nodes call Dispatcher/SQL/RAG/ADA adapters without nested `ask`.
+
+---
+
+*End of session 2026-07-29 (LangGraph Phase 1).*
+
+---
+
+# Session 2026-07-29 — Supervisor capability / chart / attachment transitions
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-29 |
+| **Objective** | Fix LangGraph Supervisor + IntentRouter state transitions (capability lock, chart reuse, ADA detach) |
+| **Tests** | `test_intent_router` + `test_supervisor_transitions` + `test_langgraph_orchestration` — **36 passed** |
+
+## Bugs fixed
+
+1. **Explicit chart type ignored** — `_detect_chart_type` never checked `pie`/`line`/… and inherited `last_topic`, forcing `bar`/`horizontal_bar`.
+2. **ADA session lock** — `"sop"` alone triggered hybrid attachment compare; `"What is pickup SOP?"` / TikTok Collection stayed on ADA.
+3. **Pie not generated** — `build_charts` only created pie for status columns; explicit pie now forces a pie from categorical+numeric.
+
+## Changes
+
+| Area | Fix |
+|------|-----|
+| `core/intent_router.py` | Explicit chart types; knowledge/SOP detach branch; hybrid RAG compare only when comparing; TikTok Collection SOP phrases |
+| `tools/files/charts.py` | Honor explicit preferred chart type; categorical line charts |
+| `graph/state.py` / `transitions.py` / `nodes.py` / `runtime.py` | Track capability / visualization / attachment session; transition logs |
+| `tests/test_supervisor_transitions.py` | SOP↔ADA↔SQL↔Chat + bar→pie→line + upload→CBT→RAG |
+
+## Transition log shape
+
+```text
+Current Capability: ADA
+↓
+Detected Intent: SOP_QA
+↓
+Detach Attachment
+↓
+Activate RAG
+```
+
+---
+
+*End of session 2026-07-29 (Supervisor state transitions).*
+
+---
+
+# Session — Planner-Driven Multi-Agent Execution Loop (2026-07-29)
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-07-29 |
+| **Objective** | Replace Phase-1 nested-`ask` LangGraph shell with six-stage planner-driven loop |
+| **Tests** | `test_task_spec_and_verifier` + `test_langgraph_orchestration` + `test_supervisor_transitions` — **25 passed** |
+
+## Decision (locked)
+
+- LangGraph owns full lifecycle when `LANGGRAPH_ENABLED=true`
+- Default stays **false** (legacy `GOFOAgent.ask`)
+- No nested `ask` on LangGraph path — `PlanExecutor.execute` only
+- Universal six stages for ADA/SOP/SQL/Chat/Wait/hybrid
+- Clarification stays pre-tool; **one** automatic re-plan max
+- Verifier: **SOP/RAG must never trigger SQL retry**
+
+## Lifecycle
+
+```text
+prepare → intent_understanding → task_decomposition → planner
+  → (clarify|tool_execution) → result_verification
+  → (replan→tool_execution | finalize)
+```
+
+## Changes
+
+| Area | Change |
+|------|--------|
+| `core/task_decomposition.py` | New `TaskSpec` + heuristic `decompose()` |
+| `core/request_verifier.py` | New `VerificationReport` + SOP-safe checks |
+| `graph/execution.py` | Plan / clarify / execute / commit helpers (no nested ask) |
+| `graph/nodes.py` / `builder.py` / `state.py` | Six-stage graph; AgentState facets |
+| `tests/test_task_spec_and_verifier.py` | Unit coverage |
+| `tests/test_langgraph_orchestration.py` | Happy path + one-replan loop (mocked PlanExecutor) |
+| `README.md` | Architecture diagram → six-stage loop |
+
+## Risk controls
+
+- Feature flag keeps production identical until enabled
+- Verifier SOP rule prevents Reflection-style SQL overwrite of RAG on this path
+- One replan max preserves latency bounds
+
+---
+
+*End of session 2026-07-29 (Planner-driven loop).*
+
+---
+
+# Session — SOP Misroute Fix → Frontier Orchestrator (2026-08-02)
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-08-02 |
+| **Objective** | Stop SOP follow-ups falling into SQL date clarification; add frontier decision tree on LangGraph |
+| **Tests** | `test_sop_misroute_fixes` + `test_frontier` + langgraph/router/supervisor — **51 passed** |
+
+## Phase 1 — SOP misroute / clarification
+
+| Area | Fix |
+|------|-----|
+| `core/intent_router.py` | Procedural SOP phrases; SOP before SQL; knowledge default → RAG not SQL |
+| `core/clarification_manager.py` | Cancel pending clarification on new SOP/domain asks |
+| `core/agent.py` / `graph/execution.py` | Clear pending when resume cancelled |
+| `core/intent_classifier.py` | SOP before follow-up; driver responsibility / CBT heuristics |
+| `core/data_source_selector.py` | SOP signals → RAG; never SQL date prompt for knowledge |
+
+## Phase 2 — Frontier (LangGraph)
+
+Decision order: SOP searchable → else ADA/data → requires analysis? → SQL/Python tools → summarize; else not meaningful.
+
+| Piece | Path |
+|-------|------|
+| Frontier | `graph/frontier.py` |
+| Nodes | `frontier` + `summarize` in `graph/nodes.py` |
+| Builder | `prepare → intent → frontier → … → summarize → finalize` |
+
+`LANGGRAPH_ENABLED` remains default **false**.
+
+---
+
+*End of session 2026-08-02 (SOP fix + frontier).*

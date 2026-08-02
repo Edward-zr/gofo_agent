@@ -146,6 +146,79 @@ def _has_entity_scope(text: str) -> bool:
     )
 
 
+_DATE_ANSWER_PHRASES = (
+    "today",
+    "yesterday",
+    "this week",
+    "last week",
+    "this month",
+    "last month",
+    "all historical",
+    "historical data",
+    "all history",
+)
+
+_NEW_QUESTION_MARKERS = (
+    "what is",
+    "what are",
+    "what should",
+    "what does",
+    "tell me more about",
+    "tell me about",
+    "how should",
+    "how do",
+    "how does",
+    "responsible for",
+    "explain",
+    "define ",
+    "according to sop",
+    "sop",
+    "cbt",
+    "procedure",
+    "policy",
+)
+
+
+def is_clarification_answer(pending: PendingClarification, user_text: str) -> bool:
+    """True when the user is answering the pending clarification, not asking anew."""
+    text = _normalize(user_text)
+    if not text:
+        return False
+    if looks_like_new_domain_question(user_text):
+        return False
+    if _match_option(user_text, pending.options or []):
+        return True
+    # Short date / period answers for date_range clarifications
+    if any(field in (pending.missing_fields or []) for field in ("date_range", "time_period")):
+        if any(phrase in text for phrase in _DATE_ANSWER_PHRASES):
+            return True
+        if len(text.split()) <= 4 and _has_time(text):
+            return True
+    # Very short replies (option-like) without question shape
+    if len(text.split()) <= 5 and "?" not in user_text and not looks_like_new_domain_question(
+        user_text
+    ):
+        if any(opt.label.lower() in text or opt.id.replace("_", " ") in text for opt in pending.options or []):
+            return True
+    return False
+
+
+def looks_like_new_domain_question(user_text: str) -> bool:
+    """Detect a fresh SOP/knowledge ask that must not resume a pending clarification."""
+    text = _normalize(user_text)
+    if not text:
+        return False
+    if any(marker in text for marker in _NEW_QUESTION_MARKERS):
+        return True
+    if re.search(r"\b(responsible for|what should (the )?drivers?\b)", text):
+        return True
+    if text.endswith("?") and len(text.split()) >= 3:
+        # "tell me more about the CBT?" style
+        if re.search(r"\b(about|what|how|why|who|when|which)\b", text):
+            return True
+    return False
+
+
 def _detect_ambiguity(
     question: str,
     *,
@@ -477,8 +550,27 @@ class ClarificationManager:
         pending: PendingClarification,
         user_response: str,
     ) -> ClarificationDecision:
-        """Merge the user's clarification answer into a resumed question."""
+        """Merge the user's clarification answer into a resumed question.
+
+        If the user asks a new domain/SOP question instead of answering the
+        pending clarification, return without ``resumed_question`` so the
+        caller clears pending and re-routes.
+        """
         user_response = (user_response or "").strip()
+        if not is_clarification_answer(pending, user_response):
+            _debug(
+                "cancel_pending_for_new_question\n"
+                f"  original={pending.original_question}\n"
+                f"  user_response={user_response}\n"
+                f"  reason=new_domain_or_sop_ask"
+            )
+            return ClarificationDecision(
+                needs_clarification=False,
+                pending=None,
+                resumed_question=None,
+                skip_reason="New domain question — cancel pending clarification.",
+            )
+
         option = _match_option(user_response, pending.options)
         resumed = _enrich_question(
             pending.original_question or pending.resolved_base,

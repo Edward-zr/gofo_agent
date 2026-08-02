@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import re
 from typing import Any
 
 from pathlib import Path
@@ -61,12 +62,14 @@ def build_charts(
     max_charts: int = 3,
     preferred_dimension: str | None = None,
     preferred_metric: str | None = None,
+    preferred_chart_type: str | None = None,
 ) -> list[dict[str, Any]]:
     """Inspect a dataframe and render appropriate chart images with matplotlib."""
     if frame is None or frame.empty:
         return []
 
     normalized = question.lower()
+    preferred = (preferred_chart_type or "").strip().lower() or _preferred_chart_type(normalized)
     categorical = _categorical_columns(frame)
     numeric = _numeric_columns(frame)
     datetime_cols = _datetime_columns(frame)
@@ -85,7 +88,25 @@ def build_charts(
         elif pd.api.types.is_numeric_dtype(frame[preferred_metric]):
             numeric = [preferred_metric, *numeric]
 
-    if datetime_cols and numeric and not preferred_dimension:
+    # Explicit chart-type requests: build that chart first and prefer it.
+    forced = _build_forced_chart(
+        frame,
+        preferred=preferred,
+        categorical=categorical,
+        numeric=numeric,
+        datetime_cols=datetime_cols,
+    )
+    if forced:
+        charts.append(forced)
+
+    if datetime_cols and numeric and not preferred_dimension and preferred not in {
+        "pie",
+        "bar",
+        "horizontal_bar",
+        "scatter",
+        "histogram",
+        "heatmap",
+    }:
         charts.append(
             _line_chart(
                 frame,
@@ -95,7 +116,7 @@ def build_charts(
             )
         )
 
-    if categorical and numeric:
+    if categorical and numeric and preferred not in {"pie", "line", "scatter", "histogram", "heatmap"}:
         dim = categorical[0]
         metric = numeric[0]
         if dim in frame.columns and metric in frame.columns and len(frame) <= 50 and metric in frame.columns:
@@ -126,6 +147,24 @@ def build_charts(
                 title=f"{metric} by {dim}",
             )
         )
+    elif categorical and numeric and preferred in {"bar", "horizontal_bar"} and not forced:
+        dim = categorical[0]
+        metric = numeric[0]
+        aggregated = (
+            frame.groupby(dim, dropna=False)[metric]
+            .sum(numeric_only=True)
+            .reset_index()
+            .sort_values(metric, ascending=False)
+            .head(12)
+        )
+        charts.append(
+            _bar_chart(
+                aggregated,
+                x=dim,
+                y=metric,
+                title=f"{metric} by {dim}",
+            )
+        )
 
     status_col = next(
         (
@@ -135,7 +174,7 @@ def build_charts(
         ),
         None,
     )
-    if status_col:
+    if status_col and preferred not in {"bar", "horizontal_bar", "line", "scatter", "histogram", "heatmap"}:
         counts = frame[status_col].value_counts(dropna=False).reset_index()
         counts.columns = [status_col, "count"]
         charts.append(
@@ -147,7 +186,7 @@ def build_charts(
             )
         )
 
-    if len(numeric) >= 2 and ("scatter" in normalized or "correlation" in normalized or not charts):
+    if len(numeric) >= 2 and ("scatter" in normalized or "correlation" in normalized or (not charts and preferred == "scatter")):
         charts.append(
             _scatter_chart(
                 frame,
@@ -157,7 +196,7 @@ def build_charts(
             )
         )
 
-    if numeric and ("histogram" in normalized or "distribution" in normalized or len(charts) < 2):
+    if numeric and ("histogram" in normalized or "distribution" in normalized or (preferred == "histogram" and not forced)):
         charts.append(
             _histogram(
                 frame,
@@ -166,10 +205,10 @@ def build_charts(
             )
         )
 
-    if len(numeric) >= 2 and ("heatmap" in normalized or "matrix" in normalized):
+    if len(numeric) >= 2 and ("heatmap" in normalized or "matrix" in normalized or preferred == "heatmap"):
         charts.append(_heatmap(frame, numeric[:6], title="Numeric correlation matrix"))
 
-    ordered = _prioritize([chart for chart in charts if chart], normalized)
+    ordered = _prioritize([chart for chart in charts if chart], normalized, preferred=preferred)
     deduped: list[dict[str, Any]] = []
     seen_types: set[str] = set()
     for chart in ordered:
@@ -177,30 +216,102 @@ def build_charts(
             continue
         seen_types.add(chart["type"])
         deduped.append(chart)
+        if preferred and chart["type"] == preferred:
+            # Explicit request: return the requested chart first (and alone when possible).
+            return [chart]
         if len(deduped) >= max_charts:
             break
     return deduped
 
 
-def _prioritize(charts: list[dict[str, Any]], normalized: str) -> list[dict[str, Any]]:
-    preferred = None
-    if any(word in normalized for word in ("pie", "share", "percent", "status")):
-        preferred = "pie"
-    elif any(word in normalized for word in ("line", "trend", "over time", "time")):
-        preferred = "line"
-    elif any(word in normalized for word in ("scatter", "correlation")):
-        preferred = "scatter"
-    elif any(word in normalized for word in ("histogram", "distribution")):
-        preferred = "histogram"
-    elif any(word in normalized for word in ("heatmap", "matrix")):
-        preferred = "heatmap"
-    elif any(word in normalized for word in ("bar", "rank", "compare", "by ")):
-        preferred = "bar"
+def _preferred_chart_type(normalized: str) -> str | None:
+    if re.search(r"\bpie\b", normalized):
+        return "pie"
+    if any(word in normalized for word in ("line chart", "trend", "over time")) or (
+        "line" in normalized and "chart" in normalized
+    ):
+        return "line"
+    if "scatter" in normalized or "correlation" in normalized:
+        return "scatter"
+    if "histogram" in normalized or (
+        "distribution" in normalized and "chart" in normalized
+    ):
+        return "histogram"
+    if "heatmap" in normalized or "matrix" in normalized:
+        return "heatmap"
+    if "horizontal bar" in normalized:
+        return "horizontal_bar"
+    if "bar chart" in normalized or ("bar" in normalized and "chart" in normalized):
+        return "bar"
+    return None
 
+
+def _build_forced_chart(
+    frame: pd.DataFrame,
+    *,
+    preferred: str | None,
+    categorical: list[str],
+    numeric: list[str],
+    datetime_cols: list[str],
+) -> dict[str, Any] | None:
+    """Build the explicitly requested chart type when possible."""
+    if not preferred:
+        return None
+    if preferred in {"pie", "bar", "horizontal_bar"} and categorical and numeric:
+        dim, metric = categorical[0], numeric[0]
+        aggregated = (
+            frame.groupby(dim, dropna=False)[metric]
+            .sum(numeric_only=True)
+            .reset_index()
+            .sort_values(metric, ascending=False)
+            .head(12)
+        )
+        if preferred == "pie":
+            return _pie_chart(
+                aggregated,
+                label=dim,
+                value=metric,
+                title=f"{metric} by {dim}",
+            )
+        return _bar_chart(
+            aggregated,
+            x=dim,
+            y=metric,
+            title=f"{metric} by {dim}",
+        )
+    if preferred == "line" and numeric:
+        x_col = datetime_cols[0] if datetime_cols else (categorical[0] if categorical else None)
+        if x_col:
+            return _line_chart(
+                frame if x_col in frame.columns else frame,
+                x=x_col,
+                y=numeric[0],
+                title=f"{numeric[0]} by {x_col}",
+            )
+    if preferred == "scatter" and len(numeric) >= 2:
+        return _scatter_chart(
+            frame,
+            x=numeric[0],
+            y=numeric[1],
+            title=f"{numeric[0]} vs {numeric[1]}",
+        )
+    if preferred == "histogram" and numeric:
+        return _histogram(frame, column=numeric[0], title=f"{numeric[0]} distribution")
+    if preferred == "heatmap" and len(numeric) >= 2:
+        return _heatmap(frame, numeric[:6], title="Numeric correlation matrix")
+    return None
+
+
+def _prioritize(
+    charts: list[dict[str, Any]],
+    normalized: str,
+    *,
+    preferred: str | None = None,
+) -> list[dict[str, Any]]:
+    preferred = preferred or _preferred_chart_type(normalized)
     if not preferred:
         return charts
     return sorted(charts, key=lambda chart: 0 if chart["type"] == preferred else 1)
-
 
 def _bar_chart(frame: pd.DataFrame, *, x: str, y: str, title: str) -> dict[str, Any] | None:
     if frame.empty or x not in frame.columns or y not in frame.columns:
@@ -225,17 +336,37 @@ def _line_chart(frame: pd.DataFrame, *, x: str, y: str, title: str) -> dict[str,
     if frame.empty or x not in frame.columns or y not in frame.columns:
         return None
     ordered = frame[[x, y]].copy()
-    ordered[x] = pd.to_datetime(ordered[x], errors="coerce")
     ordered[y] = pd.to_numeric(ordered[y], errors="coerce")
-    ordered = ordered.dropna().sort_values(x)
-    if ordered.empty:
-        return None
-
-    fig, ax = plt.subplots(figsize=(9, 4.8))
-    ax.plot(ordered[x], ordered[y], color="#2F6FED", linewidth=2, marker="o", markersize=3)
+    as_dates = pd.to_datetime(ordered[x], errors="coerce")
+    if as_dates.notna().sum() >= max(2, int(len(ordered) * 0.5)):
+        ordered[x] = as_dates
+        ordered = ordered.dropna().sort_values(x)
+        if ordered.empty:
+            return None
+        fig, ax = plt.subplots(figsize=(9, 4.8))
+        ax.plot(ordered[x], ordered[y], color="#2F6FED", linewidth=2, marker="o", markersize=3)
+    else:
+        ordered = ordered.dropna(subset=[y])
+        if ordered.empty:
+            return None
+        # Categorical / non-date X: still honor an explicit line-chart request.
+        fig, ax = plt.subplots(figsize=(9, 4.8))
+        labels = ordered[x].astype(str)
+        ax.plot(
+            range(len(ordered)),
+            ordered[y],
+            color="#2F6FED",
+            linewidth=2,
+            marker="o",
+            markersize=3,
+        )
+        ax.set_xticks(range(len(ordered)))
+        ax.set_xticklabels(labels, rotation=30, ha="right")
     ax.set_xlabel(x)
     ax.set_ylabel(y)
     ax.set_title(title)
+    fig.tight_layout()
+    return _chart_payload("line", title, fig, x=x, y=y, data=_records(ordered))
     fig.autofmt_xdate()
     fig.tight_layout()
     return _chart_payload("line", title, fig, x=x, y=y, data=_records(ordered))

@@ -83,8 +83,26 @@ class GOFOAgent:
         self.attachment_memory.last_analysis = None
         self.state.clear_attachment_context()
 
-    def ask(self, question: str, attachment_ids: list[str] | None = None) -> dict[str, Any]:
-        """Ask GOFO a question and return a dashboard-friendly response."""
+    def ask(
+        self,
+        question: str,
+        attachment_ids: list[str] | None = None,
+        *,
+        pre_routed: bool = False,
+        resolved_question: str | None = None,
+        route_decision: dict[str, Any] | None = None,
+        conversation_resolution: dict[str, Any] | None = None,
+        repair_detected: bool | None = None,
+        repair_type: str | None = None,
+        changed_dimension: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask GOFO a question and return a dashboard-friendly response.
+
+        When ``pre_routed=True`` (LangGraph Phase 1), ConversationResolver and
+        IntentRouter have already run. This method reuses the supplied
+        ``resolved_question`` / ``route_decision`` and skips re-repair / re-route.
+        Planner, Dispatcher, Reflection, QA, and Memory still run as usual.
+        """
         started = perf_counter()
         question = question.strip()
         if not question:
@@ -92,9 +110,21 @@ class GOFOAgent:
 
         logger.info("Incoming question")
         attachment_ids = attachment_ids or []
+        if pre_routed:
+            if not route_decision:
+                raise ValueError("pre_routed ask() requires route_decision.")
+            logger.info(
+                "Conversation Repair\n↓\nIntent Router\n↓\nGOFOAgent (pre-routed)"
+            )
+            logger.info(
+                "[Phase1] GOFOAgent pre-routed mode — skipping ConversationResolver "
+                "and IntentRouter"
+            )
         try:
             if attachment_ids:
-                processed = self.attachment_service.get_many_processed(attachment_ids, question=question)
+                processed = self.attachment_service.get_many_processed(
+                    attachment_ids, question=question
+                )
                 self.attachment_memory.register_contexts(processed)
 
             previous_state = self.state.snapshot()
@@ -105,27 +135,56 @@ class GOFOAgent:
             if config.INTENT_CLASSIFIER_ENABLED:
                 classification = self.intent_classifier.classify(question, self.memory)
 
-            # Attachment activate/detach + wait-for-upload remain router-owned.
-            route_decision = self.intent_router.route(
-                question,
-                previous_state,
-                new_attachment_ids=attachment_ids or None,
-                has_stored_attachments=bool(self.attachment_memory.processed_contexts),
-            )
-            if classification is not None:
-                classification = _align_classification_with_route(
-                    classification,
-                    route_decision,
-                    has_new_upload=bool(attachment_ids),
-                )
+            if pre_routed:
+                # Phase 1: reuse LangGraph IntentRouter decision (do not re-route).
+                assert route_decision is not None  # for type checkers
+                if classification is not None:
+                    classification = _align_classification_with_route(
+                        classification,
+                        route_decision,
+                        has_new_upload=bool(attachment_ids),
+                    )
+                # Apply activate/detach from the supplied decision (idempotent).
+                if route_decision["detach_attachments"]:
+                    self.attachment_memory.deactivate()
+                    self.state.attachment_active = False
+                elif route_decision["use_attachments"]:
+                    self.attachment_memory.activate(attachment_ids or None)
 
-            if route_decision["detach_attachments"]:
-                # Detach stops auto-binding for this turn; persisted metadata stays
-                # so later file follow-ups can still recover ADA context.
-                self.attachment_memory.deactivate()
-                self.state.attachment_active = False
-            elif route_decision["use_attachments"]:
-                self.attachment_memory.activate(attachment_ids or None)
+                from tools.conversation.resolver import resolution_from_dict
+
+                conversation_resolution_obj = resolution_from_dict(
+                    conversation_resolution,
+                    question=question,
+                    resolved_question=resolved_question or question,
+                    repair_detected=bool(repair_detected),
+                    repair_type=repair_type,
+                    changed_dimension=changed_dimension,
+                )
+            else:
+                # Attachment activate/detach + wait-for-upload remain router-owned.
+                route_decision = self.intent_router.route(
+                    question,
+                    previous_state,
+                    new_attachment_ids=attachment_ids or None,
+                    has_stored_attachments=bool(self.attachment_memory.processed_contexts),
+                )
+                if classification is not None:
+                    classification = _align_classification_with_route(
+                        classification,
+                        route_decision,
+                        has_new_upload=bool(attachment_ids),
+                    )
+
+                if route_decision["detach_attachments"]:
+                    # Detach stops auto-binding for this turn; persisted metadata stays
+                    # so later file follow-ups can still recover ADA context.
+                    self.attachment_memory.deactivate()
+                    self.state.attachment_active = False
+                elif route_decision["use_attachments"]:
+                    self.attachment_memory.activate(attachment_ids or None)
+
+                conversation_resolution_obj = self.conversation.resolve(question)
 
             attachment_contexts, file_context = self.attachment_memory.resolve_for_question(
                 question,
@@ -133,36 +192,46 @@ class GOFOAgent:
                 use_attachments=route_decision["use_attachments"],
             )
 
-            conversation_resolution = self.conversation.resolve(question)
             semantic = analyze_request(
                 question,
-                resolved_question=conversation_resolution.resolved_question,
+                resolved_question=conversation_resolution_obj.resolved_question,
                 conversation_state=previous_semantic_state,
-                repair_detected=conversation_resolution.repair_detected,
+                repair_detected=conversation_resolution_obj.repair_detected,
                 has_attachments=route_decision["use_attachments"] and bool(attachment_contexts),
             )
             intent = classify_business_intent(
                 question,
-                resolved_question=conversation_resolution.resolved_question,
+                resolved_question=conversation_resolution_obj.resolved_question,
                 conversation_state=previous_semantic_state,
-                repair_detected=conversation_resolution.repair_detected,
+                repair_detected=conversation_resolution_obj.repair_detected,
                 intent_hint=_routing_intent_hint(route_decision, question)
-                or conversation_resolution.intent_hint
+                or conversation_resolution_obj.intent_hint
                 or semantic.intent_hint(),
             )
-            context = build_context(conversation_resolution, intent, previous_semantic_state)
+            context = build_context(
+                conversation_resolution_obj, intent, previous_semantic_state
+            )
 
-            resolved_question = context.resolved_question
-            if semantic.confidence >= 0.65 and semantic.resolved_question:
-                resolved_question = semantic.resolved_question
-            if (
-                resolved_question == question
-                and self.memory.get_recent_history()
-                and not conversation_resolution.repair_detected
-                and not conversation_resolution.intent_hint
-                and not route_decision["use_attachments"]
-            ):
-                resolved_question = resolve(question, self.memory)
+            if pre_routed:
+                # LangGraph owns the resolved question — do not let semantic/memory
+                # rewrite it (that would re-introduce dual repair ownership).
+                resolved_question_final = (
+                    resolved_question
+                    or conversation_resolution_obj.resolved_question
+                    or question
+                )
+            else:
+                resolved_question_final = context.resolved_question
+                if semantic.confidence >= 0.65 and semantic.resolved_question:
+                    resolved_question_final = semantic.resolved_question
+                if (
+                    resolved_question_final == question
+                    and self.memory.get_recent_history()
+                    and not conversation_resolution_obj.repair_detected
+                    and not conversation_resolution_obj.intent_hint
+                    and not route_decision["use_attachments"]
+                ):
+                    resolved_question_final = resolve(question, self.memory)
 
             # Resume paused plan when the user answers a pending clarification.
             resumed_from_clarification = False
@@ -177,7 +246,7 @@ class GOFOAgent:
                     question,
                 )
                 if resume_decision.resumed_question:
-                    resolved_question = resume_decision.resumed_question
+                    resolved_question_final = resume_decision.resumed_question
                     resumed_from_clarification = True
                     clarification_slots = dict(resume_decision.filled_slots or {})
                     # Persist filled slots into short-term memory for follow-ups.
@@ -186,7 +255,17 @@ class GOFOAgent:
                     if clarification_slots.get("date_range"):
                         self.memory.global_state["date_range"] = clarification_slots["date_range"]
                     self.pending_clarification = None
-                    logger.info("Resumed after clarification: %s", resolved_question)
+                    logger.info("Resumed after clarification: %s", resolved_question_final)
+                else:
+                    # New SOP/domain ask while clarification was pending — drop it.
+                    self.pending_clarification = None
+                    logger.info(
+                        "Cleared pending clarification for new question: %s",
+                        question,
+                    )
+
+            resolved_question = resolved_question_final
+            conversation_resolution = conversation_resolution_obj
 
             logger.info("Resolved question: %s", resolved_question)
             logger.info(

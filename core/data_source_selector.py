@@ -176,6 +176,14 @@ _RAG_PHRASES = (
     "explain possible",
     "why might",
     "root cause guidance",
+    "cbt",
+    "responsible for",
+    "responsibilities",
+    "what should driver",
+    "what should the driver",
+    "tiktok collection",
+    "collection by tiktok",
+    "tell me more about",
 )
 
 _MEMORY_PHRASES = (
@@ -476,6 +484,35 @@ class DataSourceSelector:
                 has_history = bool(conversation_memory.get_recent_history())
             elif isinstance(conversation_memory, list):
                 has_history = bool(conversation_memory)
+
+        # SOP / knowledge signals: never ask for SQL date ranges.
+        sop_signals = _has_any(text, _RAG_PHRASES) or (
+            classification is not None
+            and classification.intent
+            in {IntentType.SOP_QA, IntentType.SOP_Summary, IntentType.SOP_Compare}
+        )
+        if sop_signals and (
+            classification is None
+            or classification.intent
+            in {
+                IntentType.Unknown,
+                IntentType.SOP_QA,
+                IntentType.SOP_Summary,
+                IntentType.SOP_Compare,
+                IntentType.Follow_Up,
+            }
+            or classification.requires_clarification
+        ):
+            _add(selected, DataSource.RAG, "SOP / policy knowledge ask.", "SOP answer", 1)
+            if classification and classification.intent == IntentType.Follow_Up:
+                _add(selected, DataSource.MEMORY, "Continue prior SOP context.", "Prior context", 1)
+            return _finalize(
+                question,
+                selected,
+                combine_reason="SOP/knowledge signals → RAG (no SQL date clarification).",
+                confidence=0.9,
+                reasoning="Prefer SOP retrieval over Unknown/clarification date prompt.",
+            )
 
         if classification and (
             classification.requires_clarification or classification.intent == IntentType.Unknown

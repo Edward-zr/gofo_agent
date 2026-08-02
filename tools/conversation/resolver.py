@@ -882,3 +882,53 @@ def _clean_question(value: str) -> str:
     if compact.lower().startswith(("which ", "what ", "why ", "how ", "show ", "compare ", "find ")):
         compact = compact[:1].upper() + compact[1:]
     return compact + ("?" if has_question_mark else "")
+
+
+def resolution_to_dict(resolution: ConversationResolution) -> dict[str, Any]:
+    """Serialize ConversationResolution for graph / pre-routed handoff."""
+    from dataclasses import asdict
+
+    payload = asdict(resolution)
+    cache_key = payload.get("cache_key")
+    if isinstance(cache_key, tuple):
+        payload["cache_key"] = list(cache_key)
+    return payload
+
+
+def resolution_from_dict(
+    data: dict[str, Any] | None,
+    *,
+    question: str,
+    resolved_question: str | None = None,
+    repair_detected: bool = False,
+    repair_type: str | None = None,
+    changed_dimension: str | None = None,
+) -> ConversationResolution:
+    """Rebuild ConversationResolution without calling ConversationResolver.resolve."""
+    payload = dict(data or {})
+    cache_key = payload.get("cache_key")
+    if isinstance(cache_key, list):
+        cache_key = tuple(cache_key)
+    return ConversationResolution(
+        original_question=str(payload.get("original_question") or question),
+        resolved_question=str(
+            payload.get("resolved_question") or resolved_question or question
+        ),
+        intent_hint=payload.get("intent_hint"),
+        metric=payload.get("metric"),
+        dimension=payload.get("dimension"),
+        entities=dict(payload.get("entities") or {}),
+        filters=dict(payload.get("filters") or {}),
+        date_range=payload.get("date_range"),
+        inherited_context=dict(payload.get("inherited_context") or {}),
+        repair_detected=bool(
+            payload.get("repair_detected")
+            if "repair_detected" in payload
+            else repair_detected
+        ),
+        repair_type=payload.get("repair_type", repair_type),
+        changed_dimension=payload.get("changed_dimension", changed_dimension),
+        use_previous_result=bool(payload.get("use_previous_result") or False),
+        use_previous_analysis=bool(payload.get("use_previous_analysis") or False),
+        cache_key=cache_key,
+    )

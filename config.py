@@ -277,6 +277,40 @@ MULTI_AGENT_REFLECTION = os.getenv("MULTI_AGENT_REFLECTION", "false").lower() in
     "on",
 }
 
+# LangGraph orchestration (migration layer — wraps existing GOFOAgent tools)
+LANGGRAPH_ENABLED = os.getenv("LANGGRAPH_ENABLED", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+# When true, graph uses IntentRouter conditional nodes; when false, single legacy ask node.
+LANGGRAPH_ROUTED_NODES = os.getenv("LANGGRAPH_ROUTED_NODES", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+LANGGRAPH_CHECKPOINTING = os.getenv("LANGGRAPH_CHECKPOINTING", "true").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+LANGGRAPH_DEBUG = os.getenv("LANGGRAPH_DEBUG", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+# Optional LangSmith tracing (also set LANGCHAIN_TRACING_V2=true + LANGCHAIN_API_KEY)
+LANGGRAPH_TRACING = os.getenv("LANGGRAPH_TRACING", "false").lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
 # Clarification manager (ask before tools when parameters are missing)
 CLARIFICATION_MANAGER_ENABLED = os.getenv("CLARIFICATION_MANAGER_ENABLED", "true").lower() in {
     "1",

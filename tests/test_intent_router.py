@@ -131,7 +131,8 @@ def test_sql_then_generate_chart_routes_sql_with_chart() -> None:
     )
     assert decision["intent"] == RouteIntent.SQL_ANALYTICS
     assert decision["followup"] is True
-    assert decision["chart_type"] == "horizontal_bar"
+    # Chart type comes from this turn only — do not inherit last_topic="ranking".
+    assert decision["chart_type"] == "bar"
     assert decision["handler"] == "SQL Planner"
 
 

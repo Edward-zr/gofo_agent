@@ -65,6 +65,12 @@ def disable_clarification_manager_by_default(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.fixture(autouse=True)
+def disable_langgraph_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep legacy GOFOAgent path in most tests; graph covered in test_langgraph_*."""
+    monkeypatch.setattr("config.LANGGRAPH_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
 def disable_multi_agent_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep ToolOrchestrator as PlanExecutor backend in most tests.
 
