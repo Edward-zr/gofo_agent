@@ -1,0 +1,209 @@
+{
+  "experiment_id": "exp_planner_prompt",
+  "prompt_key": "planner.planner_prompt",
+  "versions": [
+    "v1",
+    "v2"
+  ],
+  "priorities": [
+    "accuracy",
+    "sql_success",
+    "scenario_success",
+    "latency",
+    "cost"
+  ],
+  "mode": "mock",
+  "generated_at": "2026-07-22T23:48:34.783293+00:00",
+  "results": {
+    "v1": {
+      "metrics": {
+        "accuracy": 65.33,
+        "planner_accuracy": 100.0,
+        "tool_selection_accuracy": 58.09,
+        "sql_success": 100.0,
+        "retrieval_accuracy": 25.5,
+        "scenario_success": 70.0,
+        "latency": 0.027,
+        "cost": 8e-06,
+        "average_tokens": 21.8,
+        "overall_score": 69.82
+      },
+      "overall": {
+        "overall_score": 69.82,
+        "benchmark_accuracy": 65.33,
+        "scenario_success_rate": 70.0,
+        "planner_accuracy": 100.0,
+        "tool_orchestration": 58.09,
+        "sql_success": 100.0,
+        "retrieval_confidence": 25.5,
+        "latency_sec": 0.027,
+        "average_tokens": 21.8,
+        "estimated_cost_per_query": 8e-06
+      },
+      "benchmark_summary": {
+        "overall_accuracy": 65.33,
+        "suite_accuracy": {
+          "sop": 65.33
+        },
+        "sop_accuracy": 65.33,
+        "sql_accuracy": 0.0,
+        "general_accuracy": 0.0,
+        "followup_accuracy": 0.0,
+        "memory_accuracy": 0.0,
+        "upload_accuracy": 0.0,
+        "tool_selection_accuracy": 31.67,
+        "sql_success_rate": 100.0,
+        "retrieval_confidence": 25.5,
+        "avg_latency_ms": 12.0,
+        "avg_tokens": 21.8,
+        "avg_cost_usd": 8e-06,
+        "exception_rate": 0.0,
+        "hallucination_rate": 0.0,
+        "pass_rate": 30.0,
+        "count": 40,
+        "failed_ids": [
+          "sop_002",
+          "sop_004",
+          "sop_005",
+          "sop_006",
+          "sop_007",
+          "sop_008",
+          "sop_010",
+          "sop_014",
+          "sop_015",
+          "sop_016",
+          "sop_017",
+          "sop_018",
+          "sop_019",
+          "sop_020",
+          "sop_022",
+          "sop_024",
+          "sop_025",
+          "sop_026",
+          "sop_027",
+          "sop_028",
+          "sop_030",
+          "sop_034",
+          "sop_035",
+          "sop_036",
+          "sop_037",
+          "sop_038",
+          "sop_039",
+          "sop_040"
+        ]
+      },
+      "scenario_summary": {
+        "multi_turn_success_rate": 85.0,
+        "planner_accuracy": 100.0,
+        "tool_orchestration_accuracy": 84.5,
+        "conversation_memory_accuracy": 100.0,
+        "clarification_accuracy": 90.0,
+        "end_to_end_workflow_success_rate": 70.0,
+        "avg_latency_ms": 42.01,
+        "avg_cost_usd": 2.7e-05,
+        "count": 10,
+        "failed_ids": [
+          "scenario_clarification_best_driver",
+          "scenario_sop_returns_then_summary",
+          "scenario_upload_wait_then_analyze"
+        ]
+      }
+    },
+    "v2": {
+      "metrics": {
+        "accuracy": 65.33,
+        "planner_accuracy": 100.0,
+        "tool_selection_accuracy": 58.09,
+        "sql_success": 100.0,
+        "retrieval_accuracy": 25.5,
+        "scenario_success": 70.0,
+        "latency": 0.027,
+        "cost": 8e-06,
+        "average_tokens": 21.8,
+        "overall_score": 69.82
+      },
+      "overall": {
+        "overall_score": 69.82,
+        "benchmark_accuracy": 65.33,
+        "scenario_success_rate": 70.0,
+        "planner_accuracy": 100.0,
+        "tool_orchestration": 58.09,
+        "sql_success": 100.0,
+        "retrieval_confidence": 25.5,
+        "latency_sec": 0.027,
+        "average_tokens": 21.8,
+        "estimated_cost_per_query": 8e-06
+      },
+      "benchmark_summary": {
+        "overall_accuracy": 65.33,
+        "suite_accuracy": {
+          "sop": 65.33
+        },
+        "sop_accuracy": 65.33,
+        "sql_accuracy": 0.0,
+        "general_accuracy": 0.0,
+        "followup_accuracy": 0.0,
+        "memory_accuracy": 0.0,
+        "upload_accuracy": 0.0,
+        "tool_selection_accuracy": 31.67,
+        "sql_success_rate": 100.0,
+        "retrieval_confidence": 25.5,
+        "avg_latency_ms": 12.0,
+        "avg_tokens": 21.8,
+        "avg_cost_usd": 8e-06,
+        "exception_rate": 0.0,
+        "hallucination_rate": 0.0,
+        "pass_rate": 30.0,
+        "count": 40,
+        "failed_ids": [
+          "sop_002",
+          "sop_004",
+          "sop_005",
+          "sop_006",
+          "sop_007",
+          "sop_008",
+          "sop_010",
+          "sop_014",
+          "sop_015",
+          "sop_016",
+          "sop_017",
+          "sop_018",
+          "sop_019",
+          "sop_020",
+          "sop_022",
+          "sop_024",
+          "sop_025",
+          "sop_026",
+          "sop_027",
+          "sop_028",
+          "sop_030",
+          "sop_034",
+          "sop_035",
+          "sop_036",
+          "sop_037",
+          "sop_038",
+          "sop_039",
+          "sop_040"
+        ]
+      },
+      "scenario_summary": {
+        "multi_turn_success_rate": 85.0,
+        "planner_accuracy": 100.0,
+        "tool_orchestration_accuracy": 84.5,
+        "conversation_memory_accuracy": 100.0,
+        "clarification_accuracy": 90.0,
+        "end_to_end_workflow_success_rate": 70.0,
+        "avg_latency_ms": 42.01,
+        "avg_cost_usd": 2.7e-05,
+        "count": 10,
+        "failed_ids": [
+          "scenario_clarification_best_driver",
+          "scenario_sop_returns_then_summary",
+          "scenario_upload_wait_then_analyze"
+        ]
+      }
+    }
+  },
+  "recommended_version": "v1",
+  "recommendation_reason": "Selected v1 using priorities: accuracy, sql_success, scenario_success, latency, cost"
+}

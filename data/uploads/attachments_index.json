@@ -479,5 +479,687 @@
       }
     },
     "error_message": null
+  },
+  "6bce7626-dfdb-4928-a9c7-74ed81a6ec35": {
+    "attachment_id": "6bce7626-dfdb-4928-a9c7-74ed81a6ec35",
+    "filename": "6bce7626-dfdb-4928-a9c7-74ed81a6ec35.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/6bce7626-dfdb-4928-a9c7-74ed81a6ec35.xlsx",
+    "uploaded_at": "2026-07-23T22:51:55Z",
+    "conversation_id": "cafc32e6-db5d-4a9e-a4fd-efa629477231",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "a5ed317e-e2f3-4d87-8e09-143c7ff9670c": {
+    "attachment_id": "a5ed317e-e2f3-4d87-8e09-143c7ff9670c",
+    "filename": "a5ed317e-e2f3-4d87-8e09-143c7ff9670c.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/a5ed317e-e2f3-4d87-8e09-143c7ff9670c.xlsx",
+    "uploaded_at": "2026-07-23T22:55:13Z",
+    "conversation_id": "685c4a02-4a8b-4bdd-bbbe-20f89c820c52",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "c87ebc82-d7fb-4db9-b8ee-cda37b748b4e": {
+    "attachment_id": "c87ebc82-d7fb-4db9-b8ee-cda37b748b4e",
+    "filename": "c87ebc82-d7fb-4db9-b8ee-cda37b748b4e.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/c87ebc82-d7fb-4db9-b8ee-cda37b748b4e.xlsx",
+    "uploaded_at": "2026-07-23T23:05:05Z",
+    "conversation_id": "1db02299-4e77-434a-a701-8192e50278e7",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "1bf367d7-6ee4-462b-8565-cc21c712cb50": {
+    "attachment_id": "1bf367d7-6ee4-462b-8565-cc21c712cb50",
+    "filename": "1bf367d7-6ee4-462b-8565-cc21c712cb50.xlsx",
+    "original_filename": "order_test.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 4935,
+    "storage_path": "/app/data/uploads/1bf367d7-6ee4-462b-8565-cc21c712cb50.xlsx",
+    "uploaded_at": "2026-07-23T23:10:07Z",
+    "conversation_id": "879b8849-84c5-42ed-94e7-bfd81864992a",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 2 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "driver_name",
+          "hub",
+          "package_count"
+        ],
+        "active_sheet": "waybill_demo"
+      },
+      "statistics": {
+        "row_count": 2,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "ec8ac10f-6316-4e7e-94a3-6b65b8218ad2": {
+    "attachment_id": "ec8ac10f-6316-4e7e-94a3-6b65b8218ad2",
+    "filename": "ec8ac10f-6316-4e7e-94a3-6b65b8218ad2.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/ec8ac10f-6316-4e7e-94a3-6b65b8218ad2.xlsx",
+    "uploaded_at": "2026-07-26T20:23:33Z",
+    "conversation_id": "0616958f-10b5-4995-a9f6-ac70b07b9a5e",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "cafeaec8-b191-422e-b395-30fc254aea01": {
+    "attachment_id": "cafeaec8-b191-422e-b395-30fc254aea01",
+    "filename": "cafeaec8-b191-422e-b395-30fc254aea01.xlsx",
+    "original_filename": "_e2e_cn_address.xlsx",
+    "content_type": "application/octet-stream",
+    "file_type": "xlsx",
+    "file_size": 5194,
+    "storage_path": "/app/data/uploads/cafeaec8-b191-422e-b395-30fc254aea01.xlsx",
+    "uploaded_at": "2026-07-26T20:33:36Z",
+    "conversation_id": "default",
+    "processing_status": "UPLOADED",
+    "metadata": {},
+    "error_message": null
+  },
+  "41e53663-4c8f-4595-88da-df4fc28d56d1": {
+    "attachment_id": "41e53663-4c8f-4595-88da-df4fc28d56d1",
+    "filename": "41e53663-4c8f-4595-88da-df4fc28d56d1.xlsx",
+    "original_filename": "_e2e_cn_address.xlsx",
+    "content_type": "application/octet-stream",
+    "file_type": "xlsx",
+    "file_size": 5194,
+    "storage_path": "/app/data/uploads/41e53663-4c8f-4595-88da-df4fc28d56d1.xlsx",
+    "uploaded_at": "2026-07-26T20:34:08Z",
+    "conversation_id": "e2e-cn-1785098048",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 5 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "发件人详细地址",
+          "总重量(KG)",
+          "状态"
+        ],
+        "active_sheet": "Sheet1"
+      },
+      "statistics": {
+        "row_count": 5,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "972c5980-48d3-4f20-98ea-059cc824220b": {
+    "attachment_id": "972c5980-48d3-4f20-98ea-059cc824220b",
+    "filename": "972c5980-48d3-4f20-98ea-059cc824220b.xlsx",
+    "original_filename": "_e2e_cn_address.xlsx",
+    "content_type": "application/octet-stream",
+    "file_type": "xlsx",
+    "file_size": 5194,
+    "storage_path": "/app/data/uploads/972c5980-48d3-4f20-98ea-059cc824220b.xlsx",
+    "uploaded_at": "2026-07-26T20:34:46Z",
+    "conversation_id": "e2e-cn-1785098086",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 5 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "发件人详细地址",
+          "总重量(KG)",
+          "状态"
+        ],
+        "active_sheet": "Sheet1"
+      },
+      "statistics": {
+        "row_count": 5,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "e8b2ba2a-93be-44bb-8c05-bdceaf271dbb": {
+    "attachment_id": "e8b2ba2a-93be-44bb-8c05-bdceaf271dbb",
+    "filename": "e8b2ba2a-93be-44bb-8c05-bdceaf271dbb.xlsx",
+    "original_filename": "_e2e_cn_address.xlsx",
+    "content_type": "application/octet-stream",
+    "file_type": "xlsx",
+    "file_size": 5194,
+    "storage_path": "/app/data/uploads/e8b2ba2a-93be-44bb-8c05-bdceaf271dbb.xlsx",
+    "uploaded_at": "2026-07-26T20:36:43Z",
+    "conversation_id": "e2e-cn-1785098203",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 5 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "发件人详细地址",
+          "总重量(KG)",
+          "状态"
+        ],
+        "active_sheet": "Sheet1"
+      },
+      "statistics": {
+        "row_count": 5,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "59e274c4-be1e-4ff5-b113-fec8433b9051": {
+    "attachment_id": "59e274c4-be1e-4ff5-b113-fec8433b9051",
+    "filename": "59e274c4-be1e-4ff5-b113-fec8433b9051.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/59e274c4-be1e-4ff5-b113-fec8433b9051.xlsx",
+    "uploaded_at": "2026-07-26T20:37:28Z",
+    "conversation_id": "a99ab025-6751-4096-ac81-67c0f569370a",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "5f10c53e-7a5c-4033-a7fe-79ed3c8bf37f": {
+    "attachment_id": "5f10c53e-7a5c-4033-a7fe-79ed3c8bf37f",
+    "filename": "5f10c53e-7a5c-4033-a7fe-79ed3c8bf37f.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/5f10c53e-7a5c-4033-a7fe-79ed3c8bf37f.xlsx",
+    "uploaded_at": "2026-07-26T21:59:02Z",
+    "conversation_id": "32a3a5e5-d93e-4e55-8d96-872e2915d6de",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "6ecd42bf-6d2e-493c-868f-787af11270f9": {
+    "attachment_id": "6ecd42bf-6d2e-493c-868f-787af11270f9",
+    "filename": "6ecd42bf-6d2e-493c-868f-787af11270f9.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/6ecd42bf-6d2e-493c-868f-787af11270f9.xlsx",
+    "uploaded_at": "2026-07-26T22:13:02Z",
+    "conversation_id": "edd764c1-cabd-47d3-aef9-9c9cc8f7d83c",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "bfd19706-0c74-4b74-840f-882f9be78c52": {
+    "attachment_id": "bfd19706-0c74-4b74-840f-882f9be78c52",
+    "filename": "bfd19706-0c74-4b74-840f-882f9be78c52.xlsx",
+    "original_filename": "pickup_driver_task_detail1784423748897.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 9726,
+    "storage_path": "/app/data/uploads/bfd19706-0c74-4b74-840f-882f9be78c52.xlsx",
+    "uploaded_at": "2026-07-26T22:22:00Z",
+    "conversation_id": "edd764c1-cabd-47d3-aef9-9c9cc8f7d83c",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 7 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "实际揽收时间",
+          "详细地址",
+          "次要地址",
+          "Dock",
+          "计划揽收包裹数",
+          "包裹数",
+          "箱数",
+          "托数",
+          "城市",
+          "州",
+          "邮编",
+          "联系人电话",
+          "联系人姓名",
+          "揽收状态",
+          "揽收失败原因",
+          "任务编码",
+          "司机",
+          "揽收站点"
+        ],
+        "active_sheet": "Sheet1"
+      },
+      "statistics": {
+        "row_count": 7,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "cc9b6d68-69f9-4141-960d-c9211e37af67": {
+    "attachment_id": "cc9b6d68-69f9-4141-960d-c9211e37af67",
+    "filename": "cc9b6d68-69f9-4141-960d-c9211e37af67.xlsx",
+    "original_filename": "order_1784414170040.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 1369369,
+    "storage_path": "/app/data/uploads/cc9b6d68-69f9-4141-960d-c9211e37af67.xlsx",
+    "uploaded_at": "2026-07-26T22:55:42Z",
+    "conversation_id": "18fb08ed-b610-41ba-83dc-04491506c155",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 8238 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "系统单号",
+          "运单号",
+          "客户单号",
+          "参考号",
+          "第三方跟踪号",
+          "总重量\n(KG)",
+          "总重量\n(OZ/LB)",
+          "状态",
+          "邮编",
+          "下单时间",
+          "客户账号",
+          "产品编码",
+          "产品名称",
+          "派送方式",
+          "订单来源",
+          "最新轨迹",
+          "轨迹发生时间",
+          "取消原因",
+          "揽收站点",
+          "派送站点",
+          "发件人姓名",
+          "发件人电话",
+          "发件地邮编",
+          "发件省/州",
+          "发件市",
+          "发件人详细地址",
+          "转第三方",
+          "接单站点",
+          "接单中心",
+          "注入口岸",
+          "时区",
+          "揽收方式"
+        ],
+        "active_sheet": "waybill_1725523152347.xlsx"
+      },
+      "statistics": {
+        "row_count": 8238,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
+  },
+  "4aaebd80-8735-4445-8a09-5a3de118eebb": {
+    "attachment_id": "4aaebd80-8735-4445-8a09-5a3de118eebb",
+    "filename": "4aaebd80-8735-4445-8a09-5a3de118eebb.xlsx",
+    "original_filename": "pickup_driver_task_detail1784506570861.xlsx",
+    "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "file_type": "xlsx",
+    "file_size": 11020,
+    "storage_path": "/app/data/uploads/4aaebd80-8735-4445-8a09-5a3de118eebb.xlsx",
+    "uploaded_at": "2026-07-26T22:58:36Z",
+    "conversation_id": "18fb08ed-b610-41ba-83dc-04491506c155",
+    "processing_status": "READY",
+    "metadata": {
+      "summary": "Excel workbook with 1 sheet(s) and 14 row(s).",
+      "file_type": "excel",
+      "file_schema": {
+        "columns": [
+          "实际揽收时间",
+          "详细地址",
+          "次要地址",
+          "Dock",
+          "计划揽收包裹数",
+          "包裹数",
+          "箱数",
+          "托数",
+          "城市",
+          "州",
+          "邮编",
+          "联系人电话",
+          "联系人姓名",
+          "揽收状态",
+          "揽收失败原因",
+          "任务编码",
+          "司机",
+          "揽收站点"
+        ],
+        "active_sheet": "Sheet1"
+      },
+      "statistics": {
+        "row_count": 14,
+        "sheet_count": 1
+      }
+    },
+    "error_message": null
   }
 }
