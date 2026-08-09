@@ -43,11 +43,31 @@ class AttachmentMemory:
         self.active_attachment_ids = []
 
     def activate(self, attachment_ids: list[str] | None = None) -> None:
-        """Re-enable explicit attachment binding for routed attachment turns."""
-        selected = attachment_ids or list(self.processed_contexts.keys())
-        for attachment_id in selected:
-            if attachment_id in self.processed_contexts and attachment_id not in self.active_attachment_ids:
-                self.active_attachment_ids.append(attachment_id)
+        """Re-enable attachment binding for routed attachment turns.
+
+        - Explicit IDs replace the active set (do not silently re-append old files).
+        - With no IDs, keep the current focus if still valid; otherwise bind only
+          the newest processed upload so follow-ups do not fall back to file #1.
+        """
+        if attachment_ids:
+            self.active_attachment_ids = [
+                attachment_id
+                for attachment_id in attachment_ids
+                if attachment_id in self.processed_contexts
+            ]
+            return
+
+        self.active_attachment_ids = [
+            attachment_id
+            for attachment_id in self.active_attachment_ids
+            if attachment_id in self.processed_contexts
+        ]
+        if self.active_attachment_ids:
+            return
+
+        if self.processed_contexts:
+            newest_id = list(self.processed_contexts.keys())[-1]
+            self.active_attachment_ids = [newest_id]
 
     def get_stored(self, attachment_id: str) -> StoredAttachment | None:
         return self.stored_attachments.get(attachment_id)
@@ -76,7 +96,12 @@ class AttachmentMemory:
             if attachment_id in self.processed_contexts
         ]
         if not contexts and self.processed_contexts:
-            contexts = resolve_file_reference(question, list(self.processed_contexts.values()))
+            contexts = resolve_file_reference(
+                question, list(self.processed_contexts.values())
+            )
+        elif len(contexts) > 1:
+            # Narrow multi-file active sets using the question (newest / "new file").
+            contexts = resolve_file_reference(question, contexts)
         file_context = build_file_context(
             question=question,
             contexts=contexts,

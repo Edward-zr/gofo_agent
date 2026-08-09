@@ -420,7 +420,15 @@ class IntentRouter:
         )
         # Inside a file session, only explicit warehouse/SOP/chat/knowledge asks detach.
         # Weak SQL-term matching ("delayed" + "pickups") must not steal ADA follow-ups.
-        explicit_ops_detach = _is_explicit_ops_db_ask(normalized)
+        # Hybrid "compare upload vs database/SOP" must stay on ADA (do not detach).
+        hybrid_file_compare = bool(
+            file_session
+            and (
+                _attachment_sql_comparison(normalized)
+                or _attachment_rag_comparison(normalized)
+            )
+        )
+        explicit_ops_detach = _is_explicit_ops_db_ask(normalized) and not hybrid_file_compare
         # Pure SOP / glossary / knowledge asks leave the file unless the user
         # also references the upload (hybrid compare stays on ADA).
         knowledge_detach = _should_detach_for_knowledge_ask(
@@ -428,9 +436,10 @@ class IntentRouter:
             file_focused=file_focused,
             uploaded_file_analytics=uploaded_file_analytics,
             references_attachment=references_attachment,
-        )
+        ) and not hybrid_file_compare
         prefer_attachment = bool(
             file_focused
+            or hybrid_file_compare
             or (
                 file_session
                 and not explicit_ops_detach

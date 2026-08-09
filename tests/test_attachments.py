@@ -662,3 +662,59 @@ def test_post_ask_accepts_attachment_ids() -> None:
 def _unexpected_core_call(*_args, **_kwargs) -> QueryResponse:
     raise AssertionError("ask_core should not be called for attachment-only analysis")
 
+
+def _ctx(attachment_id: str, filename: str) -> "ProcessedFileContext":
+    from tools.files.models import ProcessedFileContext
+
+    return ProcessedFileContext(
+        attachment_id=attachment_id,
+        filename=filename,
+        file_type="excel",
+        summary=f"Summary for {filename}",
+        source_references=[f"{filename}, sheet Monthly"],
+    )
+
+
+def test_activate_keeps_current_focus_instead_of_readding_old_files() -> None:
+    memory = AttachmentMemory()
+    first = _ctx("a1", "S&Pdata.xlsx")
+    second = _ctx("a2", "order.xlsx")
+    memory.register_contexts([first])
+    memory.register_contexts([second], replace_active=True)
+    assert memory.active_attachment_ids == ["a2"]
+
+    # Follow-up with no new upload IDs must not resurrect file #1.
+    memory.activate(None)
+    assert memory.active_attachment_ids == ["a2"]
+
+    contexts, file_context = memory.resolve_for_question(
+        "how many packages volume in 最新轨迹, show me in bar chart",
+        use_attachments=True,
+    )
+    assert [c.filename for c in contexts] == ["order.xlsx"]
+    assert file_context["filenames"] == ["order.xlsx"]
+
+
+def test_new_file_inspect_prefers_newest_upload() -> None:
+    memory = AttachmentMemory()
+    memory.register_contexts([_ctx("a1", "S&Pdata.xlsx")])
+    memory.register_contexts([_ctx("a2", "order.xlsx")], replace_active=True)
+    # Simulate a buggy legacy state where both somehow became active.
+    memory.active_attachment_ids = ["a1", "a2"]
+
+    contexts, file_context = memory.resolve_for_question(
+        "how I have upload you with new file, inspect the file",
+        use_attachments=True,
+    )
+    assert [c.filename for c in contexts] == ["order.xlsx"]
+    assert "S&Pdata.xlsx" not in file_context["filenames"]
+
+
+def test_resolve_file_reference_newest_default() -> None:
+    first = _ctx("a1", "S&Pdata.xlsx")
+    second = _ctx("a2", "order.xlsx")
+    assert resolve_file_reference("inspect the file", [first, second])[0].filename == "order.xlsx"
+    assert resolve_file_reference("plot package volume", [first, second])[0].filename == "order.xlsx"
+    assert len(resolve_file_reference("compare both files", [first, second])) == 2
+    assert len(resolve_file_reference("Which hub changed the most?", [first, second])) == 2
+

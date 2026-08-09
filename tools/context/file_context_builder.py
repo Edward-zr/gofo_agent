@@ -37,7 +37,12 @@ def build_file_context(
 
 
 def resolve_file_reference(question: str, contexts: list[ProcessedFileContext]) -> list[ProcessedFileContext]:
-    """Resolve conversational file references to specific attachments."""
+    """Resolve conversational file references to specific attachments.
+
+    Contexts are assumed in registration order (oldest → newest). Generic
+    "the file" / inspect asks prefer the newest upload so a later file is not
+    shadowed by the first one still in session memory.
+    """
     if not contexts:
         return []
     normalized = question.lower()
@@ -45,6 +50,26 @@ def resolve_file_reference(question: str, contexts: list[ProcessedFileContext]) 
         return [contexts[0]]
     if any(phrase in normalized for phrase in ("second file", "second report")) and len(contexts) > 1:
         return [contexts[1]]
+
+    # Multi-file analysis must keep the full set (before single-file narrowing).
+    if _asks_multi_file_context(normalized):
+        return contexts
+
+    if any(
+        phrase in normalized
+        for phrase in (
+            "new file",
+            "newest file",
+            "latest file",
+            "latest upload",
+            "just uploaded",
+            "newly uploaded",
+            "i uploaded",
+            "i have upload",
+            "i have uploaded",
+        )
+    ):
+        return contexts[-1:]
     if any(phrase in normalized for phrase in ("the csv", "the spreadsheet", "excel file")):
         matches = [context for context in contexts if context.file_type in {"csv", "excel"}]
         return matches or contexts[-1:]
@@ -54,9 +79,45 @@ def resolve_file_reference(question: str, contexts: list[ProcessedFileContext]) 
     if any(phrase in normalized for phrase in ("the image", "the screenshot", "this image", "this screenshot")):
         matches = [context for context in contexts if context.file_type == "image"]
         return matches or contexts[-1:]
-    if any(phrase in normalized for phrase in ("this file", "that file", "the file", "it", "them", "uploaded")):
+    if any(
+        phrase in normalized
+        for phrase in (
+            "this file",
+            "that file",
+            "the file",
+            "inspect the file",
+            "inspect file",
+            "uploaded",
+            "upload you",
+        )
+    ):
+        return contexts[-1:]
+    # Single-file follow-ups with several actives: prefer newest upload.
+    if len(contexts) > 1:
         return contexts[-1:]
     return contexts
+
+
+def _asks_multi_file_context(normalized: str) -> bool:
+    return any(
+        phrase in normalized
+        for phrase in (
+            "compare",
+            " vs ",
+            "versus",
+            "both files",
+            "both reports",
+            "all files",
+            "these reports",
+            "these files",
+            "between the",
+            "changed the most",
+            "changed most",
+            "which hub changed",
+            "difference between",
+            "diff between",
+        )
+    )
 
 
 def _select_relevant_contexts(question: str, contexts: list[ProcessedFileContext]) -> list[ProcessedFileContext]:
