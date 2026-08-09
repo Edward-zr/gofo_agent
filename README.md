@@ -1,6 +1,6 @@
 # GOFO Operations Intelligence Agent
 
-This README is the permanent source of truth for the **current** state of the project.  
+This README is the permanent source of truth for the **current** state of this branch.  
 Historical engineering sessions live in [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG.md).
 
 **Future Cursor agents: read this file first, then inspect the repository, then continue from the architecture and roadmap below. Do not recreate completed modules.**
@@ -11,30 +11,37 @@ Historical engineering sessions live in [`DEVELOPMENT_LOG.md`](./DEVELOPMENT_LOG
 
 ## Purpose
 
-`gofo_agent` is an AI **operations intelligence copilot** for GOFO logistics teams. It answers SOP/policy questions, analyzes pickup operations from a SQLite warehouse, investigates root causes, detects anomalies, supports multi-turn operational conversation, and analyzes uploaded files (Excel/CSV/PDF/images) with ChatGPT-style Advanced Data Analysis (ADA) behavior—including **real file column recognition** (English and Chinese headers).
+`gofo_agent` is an AI **operations intelligence copilot** for GOFO logistics teams. It answers SOP/policy questions, analyzes pickup operations from SQLite, supports multi-turn conversation, and analyzes uploaded files (Excel/CSV/PDF/images) with ChatGPT-style Advanced Data Analysis (ADA)—including **real file column recognition** (English and Chinese headers) and **newest-upload preference** when multiple files exist in a session.
 
 ## Business Goal
 
-Give operations users one chat surface for:
+One chat surface for:
 
-- SOP / policy questions (hybrid RAG over Chroma)
+- SOP / policy Q&A (hybrid RAG over Chroma)
 - Live operational metrics (SQL over SQLite)
-- Multi-turn follow-ups and corrections (“Actually I mean lowest driver”)
-- Uploaded logistics exports (preview + analyze + Python-generated charts + group-by named columns)
-- Multi-step analytical workflows with quality critique and bounded retries
+- Multi-turn follow-ups and corrections
+- Uploaded logistics / spreadsheet analysis + matplotlib charts
+- Multi-step analytical workflows with bounded critique/retries
 
 ## Current Development Stage
 
-**Active feature branch with a production-style local/Docker service and a multi-stage agent pipeline.**
+**Feature branch tip with dual orchestration paths (legacy `GOFOAgent.ask` + optional LangGraph frontier loop).**
 
 | Item | Value |
 |------|--------|
-| **Branch tip** | Planner-driven LangGraph loop on `add_langgraph_react_harness` (uncommitted until requested) |
-| **Prior tip** | Supervisor transition fixes + Phase-1 nested-ask graph |
-| **Tests** | TaskSpec/verifier + LangGraph loop suite green; full suite still defaults LangGraph **off** |
+| **Branch tip** | `71e2463` — Prefer newest upload for ADA follow-ups |
+| **Prior tip** | `960609a` — LangGraph frontier + SOP misroute fixes |
+| **Tests** | Attachment newest-upload + SOP misroute + frontier + LangGraph suites green; conftest keeps LangGraph **off** for most tests |
 | **Runtime** | FastAPI `:8000` + Streamlit `:8501` via Docker Compose (`--reload` + source mounts) |
 
-Completed control plane: Intent Classifier → Data Source Selection → Planner → Clarification → Supervisor/Orchestrator → Generator → Reflection/QA (skipped for file ADA). **Optional LangGraph orchestration** (`graph/`) now runs a **six-stage planner-driven loop** (intent → decompose → plan → execute → verify → one re-plan) via `PlanExecutor` — **no nested `GOFOAgent.ask`** on that path. Default remains `LANGGRAPH_ENABLED=false` (legacy `ask`). Attachment session / IntentRouter detach+chart fixes remain Stage-1 source of truth.
+**Two ask paths (do not confuse them):**
+
+| Path | When | Behavior |
+|------|------|----------|
+| **Legacy** | `LANGGRAPH_ENABLED=false` (**code default**) | Full `GOFOAgent.ask` (classifier → router → planner/dispatcher → reflection/QA → memory) |
+| **LangGraph** | `LANGGRAPH_ENABLED=true` | Frontier decision tree → TaskSpec → Planner → PlanExecutor → verify (1 replan) → summarize — **no nested `ask`** |
+
+Phase-1 SOP misroute fixes (router, clarification cancel, selector, classifier) apply to **both** paths. Prefer LangGraph for the frontier architecture once soak-tested; keep the flag as a kill switch.
 
 ---
 
@@ -42,33 +49,25 @@ Completed control plane: Intent Classifier → Data Source Selection → Planner
 
 | Item | Value |
 |------|--------|
-| **Current branch** | `add_langgraph_react_harness` (from `new_feature_1`) |
-| **Tracks** | `origin/new_feature_1` |
-| **Base** | Evolved from `cursor-memory-version` / early `main` checkpoint history |
-| **Purpose** | Ship conversational GOFO intelligence with durable docs, multi-step planning, multi-agent dispatch, Prompt Registry, reliable uploaded-file ADA, and optional LangGraph orchestration |
+| **Current branch** | `add_langgraph_react_harness` |
+| **Tracks** | `origin/add_langgraph_react_harness` |
+| **Base / ancestry** | Evolved from `new_feature_1` / earlier feature history; diverged from early `main` |
+| **Purpose** | Conversational GOFO intelligence: routing, planner, multi-agent, Prompt Registry, reliable ADA, optional LangGraph frontier orchestration |
 
 ## Major Differences from `main`
 
-Relative to the early `main` checkpoint, this line of development adds:
-
-1. **Centralized intent routing** (`IntentRouter` + `RouteDispatcher`) with attachment activate/detach
-2. **GPT + heuristic Intent Classifier** (`core/intent_classifier.py`)
-3. **Data Source Selection** (`core/data_source_selector.py`)
-4. **Clarification Manager** (`core/clarification_manager.py`) — ask before tools; resume plan after answer
-5. **Multi-step Planner** (`core/planner.py`) — `ExecutionPlan` / `required_capabilities` (never answers, never runs tools)
-6. **Knowledge Graph** (`tools/knowledge_graph/`)
-7. **Tool Orchestrator** + **PlanExecutor** — sequential/parallel waves; AgentState
-8. **Multi-Agent Architecture** — Supervisor + Agent Registry (capability → agent)
-9. **Enterprise Prompt Registry** — versioned assets under `prompts/`
-10. **Reflection + Quality Assurance** — bounded retries; **file ADA skips SQL QA**
-11. **End-to-end multimodal attachments** — upload, preview, ADA, matplotlib charts
-12. **File-column recognition** — match question text to real DataFrame headers (incl. Chinese); row-count aggregation when no `package_count`
-13. **Persisted attachment metadata** — `last_attachment_file_types` / filenames / active sheet survive across turns; empty ADA responses never erase prior values
-14. **Hybrid RAG** — Chroma dense + BM25 + RRF + cross-encoder rerank + confidence engine
-15. **Excel robustness** — shared `excel_reader` (no primary openpyxl `read_only`)
-16. **Docker source mounts + CJK fonts** — live iteration; Chinese chart labels
-17. **Documentation split** — README = current state; DEVELOPMENT_LOG = append-only history
-18. **Optional LangGraph orchestration** — planner-driven six-stage loop, shared `AgentState`, MemorySaver checkpoints; `PlanExecutor` (no nested `ask`)
+1. IntentRouter + RouteDispatcher (attachment activate/detach, SOP/SQL/ADA transitions)
+2. Intent Classifier + Data Source Selector + Clarification Manager + Planner
+3. PlanExecutor / ToolOrchestrator + multi-agent Supervisor + Agent Registry
+4. Prompt Registry (`prompts/`)
+5. Reflection + QA (skipped for file ADA)
+6. Hybrid RAG (Chroma + BM25 + RRF + rerank + confidence)
+7. Full attachment/ADA pipeline + Chinese columns + chart types
+8. Persisted attachment metadata across turns
+9. **LangGraph package** (`graph/`) — frontier → SOP/ADA/SQL tools → summarize
+10. **TaskSpec** + **RequestVerifier** (SOP never SQL-retries)
+11. **Newest-upload preference** in attachment memory / file reference resolution
+12. Docs split: README = current; DEVELOPMENT_LOG = append-only history
 
 ---
 
@@ -78,261 +77,105 @@ Relative to the early `main` checkpoint, this line of development adds:
 
 ```text
 User (Streamlit / CLI)
-  → FastAPI (session_id → SessionManager → GOFOAgent | LangGraphGOFOAgent)
-  → optional POST /attachments → AttachmentService.upload
-  → [if LANGGRAPH_ENABLED] LangGraph frontier + planner loop:
+  → FastAPI SessionManager → GOFOAgent | LangGraphGOFOAgent
+  → optional POST /attachments → AttachmentService.upload + AttachmentMemory.register
+  → [LANGGRAPH_ENABLED=true]
        prepare → intent_understanding → frontier
-         → (not meaningful → finalize)
-         → task_decomposition → planner → tool_execution → verify
-         → (replan once) → summarize → finalize
-       Frontier order: SOP searchable? → ADA/analysis? → SQL/Python tools
-       (PlanExecutor only — no nested ask)
-  → [else] GOFOAgent.ask legacy path:
-       IntentClassifier → IntentRouter → Planner/Dispatcher → Reflection/QA → Memory
-  → AskResponse (answer, sql, data, kpi, charts, sources, plan, verification_report, …)
-  → Streamlit renders text + KPI + chart PNGs
+         ├─ not_meaningful → finalize
+         └─ task_decomposition → planner → (clarify|tool_execution)
+              → result_verification → (replan×1|summarize) → finalize
+       Frontier order: SOP searchable? → ADA/analysis? → SQL|Python tools → summarize
+  → [LANGGRAPH_ENABLED=false]
+       GOFOAgent.ask: IntentClassifier → IntentRouter → Planner|Dispatcher
+         → Clarification → PlanExecutor/Supervisor → Reflection/QA → Memory
+  → AskResponse (answer, sql, data, kpi, charts, sources, plan, verification, …)
+  → Streamlit renders text + KPIs + chart PNGs
 ```
 
-**Separation of duties (do not collapse these):**
+### Frontier decision order (LangGraph)
+
+```text
+1. Understand problem type
+2. SOP-related and searchable in SOPs? → RAG (SOP sub-agent)
+3. Else ADA/data question?
+     No  → not meaningful / out of scope (no SQL date prompt)
+     Yes → requires analysis?
+           No  → not meaningful
+           Yes → choose SQL and/or Python (file ADA) tools → run → summarize
+```
+
+### Separation of duties
 
 | Role | Module | Responsibility |
 |------|--------|----------------|
-| Classify | `IntentClassifier` | *What* the user wants |
-| Select sources | `DataSourceSelector` | *Which* data sources (min set) |
-| Decompose | `core/task_decomposition.py` | Structured `TaskSpec` constraints (LangGraph Stage 2) |
-| Plan | `Planner` | *What steps* (never executes); emits capabilities |
-| Clarify | `ClarificationManager` | *Ask* for missing business params before tools |
-| Supervise | `SupervisorAgent` + `AgentRegistry` | *Which agents* by capability; dispatch/merge |
-| Orchestrate | `ToolOrchestrator` / `PlanExecutor` | Execute plan steps |
-| Verify | `core/request_verifier.py` | Checklist vs TaskSpec; **SOP never SQL-retries** |
-| Graph orchestrate | `graph/` (LangGraph) | Optional six-stage loop + checkpoints |
-| Critique | `ReflectionAgent` + QA | Evaluate draft SQL/RAG answers on **legacy ask** path |
-| Route (session) | `IntentRouter` / `RouteDispatcher` | Attachment session + single-route fallback |
-| ADA | `tools/files/*` | Parse-once DataFrame; per-prompt analysis |
-
-## LangGraph Orchestration (optional migration layer)
-
-LangGraph owns the **full planner-driven lifecycle** when `LANGGRAPH_ENABLED=true`. Business tools stay in `core/` and `tools/`. Legacy `GOFOAgent.ask` remains the default.
-
-```text
-START → prepare → intent_understanding → frontier
-          ├─(not meaningful)→ finalize → END
-          └─→ task_decomposition → planner
-                ├─(clarify)→ finalize → END
-                └─→ tool_execution → result_verification
-                      ├─(fail, retries left)→ replan → tool_execution → …
-                      └─→ summarize → finalize → END
-```
-
-| Stage | Node | Role |
-|-------|------|------|
-| Prepare | `prepare` | Attachments + hydrate session |
-| Intent | `intent_understanding` | Repair + IntentRouter + capability transitions |
-| Frontier | `frontier` | SOP searchable? → ADA/analysis? → tools or not meaningful |
-| Decompose | `task_decomposition` | `TaskSpec` (limit, chart_type, domain, …) |
-| Plan | `planner` | Always `Planner.plan`; ClarificationManager may skip tools |
-| Execute | `tool_execution` | `PlanExecutor` / SupervisorAgent only |
-| Verify | `result_verification` | vs TaskSpec; SOP-safe (no SQL retry) |
-| Re-plan | `replan` | `Planner.plan_retry` **once** max |
-| Summarize | `summarize` | Frontier presents sub-agent result to the user |
-
-| Piece | Path | Role |
-|-------|------|------|
-| Shared state | `graph/state.py` | Typed `AgentState` + `task_spec` / verification facets |
-| Nodes | `graph/nodes.py` | Six-stage loop nodes |
-| Execution | `graph/execution.py` | Plan + memory/format **without** nested `ask` |
-| Tools adapters | `graph/tools.py` | Thin wrappers: `classify_route`, repair, sync |
-| Builder | `graph/builder.py` | `StateGraph` compile + optional `MemorySaver` |
-| Runtime | `graph/runtime.py` | `LangGraphGOFOAgent.ask()` — same signature as `GOFOAgent.ask` |
-| Observability | `graph/observability.py` | Timed node enter/exit; structured errors |
-
-**Flags:** `LANGGRAPH_ENABLED` (default **false**), `LANGGRAPH_ROUTED_NODES` (retained; loop is universal), `LANGGRAPH_CHECKPOINTING`, `LANGGRAPH_DEBUG`, `LANGGRAPH_TRACING` (LangSmith via env).
-
-**Enable for Docker/UI testing:** set `LANGGRAPH_ENABLED=true` in `.env` / compose; leave `false` in production until validated.
-
-Docker Compose mounts `./graph:/app/graph` so live reload picks up graph changes.
+| Classify | `IntentClassifier` | What the user wants |
+| Route (session) | `IntentRouter` / `RouteDispatcher` | Attachment session + route intent |
+| Decompose | `core/task_decomposition.py` | `TaskSpec` constraints |
+| Select sources | `DataSourceSelector` | Minimum data sources |
+| Plan | `Planner` | Steps/capabilities (never executes) |
+| Clarify | `ClarificationManager` | Ask before tools; cancel on new domain ask |
+| Frontier | `graph/frontier.py` | Problem-type gate on LangGraph path |
+| Supervise | `SupervisorAgent` + Registry | Capability → agent dispatch |
+| Execute | `PlanExecutor` / ToolOrchestrator | Run plan steps |
+| Verify | `core/request_verifier.py` | TaskSpec checks; **SOP ≠ SQL retry** |
+| Critique | Reflection + QA | Legacy ask path (skip file ADA) |
+| ADA | `tools/files/*` | Parse-once DataFrame; charts; newest file focus |
+| RAG | `tools/rag/*` | Hybrid retrieval + generation |
+| SQL | `tools/sql/*` | Schema retrieve → generate → validate → execute |
 
 ## Frontend
 
 | Component | Path | Role |
 |-----------|------|------|
-| Primary UI | `frontend/app.py` | Streamlit chat; composer; KPIs; matplotlib chart images |
-| Attachment UI | `frontend/attachment_ui.py` | Upload “+”, history chips, preview buttons (stable keys) |
-| Preview | `frontend/attachment_preview.py` | Modal preview for CSV/Excel/PDF/DOCX/text/image |
-| Legacy UI | `ui/app.py` | Older Streamlit client; not primary |
+| Primary UI | `frontend/app.py` | Streamlit chat, upload, KPIs, charts |
+| Attachment UI | `frontend/attachment_ui.py` | Pending chips, preview keys |
+| Preview | `frontend/attachment_preview.py` | Modal preview for file types |
+| Legacy UI | `ui/app.py` | Older client (not primary) |
 
-Frontend talks only to FastAPI (`API_BASE_URL`, default `http://localhost:8000`).
+Frontend talks only to FastAPI (`API_BASE_URL`, default `http://localhost:8000`). Ask body field is **`attachments`** (list of IDs).
 
 ## Backend / API
 
 | Component | Path | Role |
 |-----------|------|------|
-| FastAPI app | `api/server.py` | `GET /health`, `GET /`, `POST /attachments`, `POST /ask` |
-| Schemas | `api/schemas.py` | `AskRequest` (`question`, `session_id`, `attachments`), `AskResponse` |
-| Sessions | `core/session.py` | `session_id` → long-lived `GOFOAgent` |
+| FastAPI | `api/server.py` | `/health`, `/`, `POST /attachments`, `POST /ask` |
+| Schemas | `api/schemas.py` | AskRequest / AskResponse |
+| Sessions | `core/session.py` | `session_id` → long-lived agent |
 
-**Important:** Session agents share the process-wide `AttachmentService` so uploads and asks use the same in-memory index. Ask body field is **`attachments`** (list of IDs), not `attachment_ids`.
+When LangGraph is enabled, `create_session_agent` wraps `GOFOAgent` in `LangGraphGOFOAgent`.
 
 ## AI Agent
 
 | Component | Path | Role |
 |-----------|------|------|
-| Agent facade | `core/agent.py` | `GOFOAgent.ask()` — legacy full pipeline; `_should_run_qa` skips file routes |
-| Intent classifier | `core/intent_classifier.py` | Primary intent + tool flags + confidence |
-| Task decomposition | `core/task_decomposition.py` | `TaskSpec` constraints for LangGraph Stage 2 |
-| Data source selector | `core/data_source_selector.py` | Minimum SQL/KG/RAG/Memory/Python sources |
-| Planner | `core/planner.py` | Multi-step `ExecutionPlan` / `plan_retry` |
-| Plan executor | `core/plan_executor.py` | Supervisor when multi-agent on; else ToolOrchestrator |
-| Request verifier | `core/request_verifier.py` | TaskSpec checklist; SOP-safe (no SQL retry) |
-| Tool orchestrator | `core/tool_orchestrator.py` | Parallel waves, deps, AgentState |
-| Quality assurance | `core/quality_assurance.py` | Evidence / reasoning / completeness; `is_file_capability()` |
-| Reflection | `core/reflection.py` | Self-critique API for Planner retries |
-| Intent router | `core/intent_router.py` | Attachment activate/detach; file-column preference; persisted-metadata fallback |
-| Dispatcher | `core/route_dispatcher.py` | ATTACHMENT_* → `analyze_attachments` |
-| Prompt Registry | `core/prompt_*.py` | Versioned prompt load / render / invoke |
-| Models | `core/models.py` | `QueryResponse` (+ plan, QA, reflection, agent_state) |
-
-## Prompt Registry
-
-Every LLM interaction loads prompts through the **Prompt Registry**. Prompts are versioned assets with YAML frontmatter — not ad-hoc strings in Python.
-
-```text
-Component → PromptManager.get / render / invoke
-         → PromptRegistry → PromptRenderer → LLM (params from frontmatter)
-```
-
-Asset root: `prompts/` (`router/`, `planner/`, `sql/`, `rag/`, `python/`, `recommendation/`, `reflection/`, `clarification/`, `shared/`, `experiments.yaml`).
-
-```bash
-export PROMPT_EXPERIMENT=planner.planner_prompt:v2
-python -m evaluation.prompt_experiments --list
-python -m evaluation.prompt_experiments --mode mock
-```
-
-**Rule:** never `open()` prompt files from tools; never hardcode temperature/max_tokens at call sites.
-
-## Multi-Agent Architecture
-
-Planner emits **capabilities**, not agent names. Supervisor → Registry → specialized agents → merge.
-
-| Agent | Capabilities |
-|-------|----------------|
-| RAG | `sop_qa`, `document_retrieval`, `document_summarization` |
-| SQL | `sql_planning`, `sql_generation`, `database_query` |
-| Analytics | `statistics`, `charts`, `data_analysis` |
-| General | `general_knowledge`, `brainstorming`, `conversation` |
-| Memory | `conversation_memory`, `context_tracking`, `slot_reuse` |
-| Reflection | `answer_review`, `consistency_check`, `hallucination_detection` |
-| Recommendation | `suggested_analyses`, `operational_recommendations`, `next_steps` |
-
-**Layout:** `agents/supervisor/`, `agents/registry/`, `agents/{rag,sql,analytics,general,memory,reflection,recommendation}/`
-
-Add agents via `BaseAgent` + `registry.register` — **do not edit the Supervisor**.
-
-Flags: `MULTI_AGENT_ENABLED` (default true), `MULTI_AGENT_PARALLEL`, `MULTI_AGENT_DEBUG`, `MULTI_AGENT_REFLECTION`.
-
-## SQL Analytics Pipeline
-
-```text
-Question → Schema Retriever → SQL Generator → Validator → Executor (SQLite) → Summarizer
-```
-
-| Component | Path |
-|-----------|------|
-| Schema Registry | `tools/sql/schema_registry.py` |
-| Schema Retriever | `tools/sql/schema_retriever.py` |
-| Planner/Generator | `tools/sql/planner.py` |
-| Validator | `tools/sql/validator.py` |
-| Service | `tools/sql/service.py` |
+| Facade | `core/agent.py` | Legacy full pipeline |
+| LangGraph runtime | `graph/runtime.py` | Same `ask()` signature |
+| Classifier / Router / Planner / Clarifier | `core/*` | Control plane |
+| TaskSpec / Verifier | `task_decomposition.py`, `request_verifier.py` | Constraints + SOP-safe verify |
+| Multi-agent | `agents/` | RAG, SQL, analytics, reflection, … |
 
 ## RAG Pipeline
 
-```text
-docs/ → ingest.py → Chroma + bm25_corpus.json
-query → hybrid retrieve (dense + BM25 → RRF → rerank)
-      → Retrieval Confidence Engine → Generator
-```
-
-| Component | Path |
-|-----------|------|
-| Hybrid retriever | `tools/rag/hybrid.py`, `retriever.py` |
-| Confidence | `tools/rag/confidence.py` |
-| Service / Generator | `tools/rag/service.py`, `generator.py` |
+- Ingest: `ingest.py` → Chroma collection `gofo_sop` (default)
+- Retrieve: dense (OpenAI embeddings) + BM25 + RRF + optional cross-encoder rerank
+- Confidence engine gates weak retrieval
+- Generate grounded SOP answers; sources returned to UI
 
 ## Vector Database
 
-- **ChromaDB** under `chroma_db/`
-- Collection: `gofo_sop` (`COLLECTION_NAME`)
-- Embeddings: OpenAI `text-embedding-3-small` (default)
-- Reranker: `BAAI/bge-reranker-base` via `sentence-transformers`
+- **Chroma** persisted under `chroma_db/` (`CHROMA_PERSIST_DIR`)
 
-## Databases
+## Database
 
-| DB | Path | Purpose |
-|----|------|---------|
-| Analytics SQLite | `data/gofo_demo.db` | Pickups, drivers, customers, hubs, addresses |
-| Memory SQLite | `data/memory.db` | Conversations, findings, patterns |
-| Knowledge Graph | `tools/knowledge_graph/` | Driver→Hub→Region, Manager→Hub, SOP ownership |
-| Upload store | `data/uploads/` | Attachment bytes + `attachments_index.json` |
-
-## Attachment / ADA Pipeline (critical)
-
-```text
-POST /attachments → AttachmentService.upload
-GOFOAgent.ask(attachments=[id])
-  → get_many_processed → AttachmentMemory.register_contexts
-  → IntentRouter → ATTACHMENT_ANALYSIS | ATTACHMENT_VISUALIZATION
-  → RouteDispatcher._dispatch_attachment
-  → analyze_attachments
-       → prefer original question wording (not repaired summary)
-       → detect_analysis_intent (AGGREGATION / SUMMARY / …)
-       → analyze_dataframe
-            → _match_columns_in_question (exact / compact / Chinese)
-            → groupby real column; COUNT(*) when no package_count
-       → charts.build_charts (preferred_dimension / preferred_metric)
-  → SKIP Reflection/QA (_should_run_qa = False)
-  → return answer + sql_rows (preview / aggregation) + charts
-```
-
-### Attachment metadata persistence (across turns)
-
-`ConversationState` keeps the last successful ADA context so follow-ups do not require re-upload when `attachment_active` becomes false:
-
-| Field | Purpose |
-|-------|---------|
-| `last_attachment_file_types` | e.g. `["excel"]`, `["pdf"]` — router data-source hints |
-| `last_attachment_filenames` | e.g. `["pickup_data.xlsx"]` — filename-aware routing later |
-| `last_active_sheet` | Active worksheet for “summarize this sheet” |
-| `attachment_context_timestamp` | UTC ISO time of last successful persist |
-
-**Why:** `attachment_active` is a per-turn bind flag. Clearing it (no new upload, SQL/chat detach) must **not** erase file context. The IntentRouter treats prior attachment route + persisted metadata as a file session and prefers ADA unless the user makes an explicit ops-DB / SOP / chat ask.
-
-**Replace when:** a new attachment is processed successfully, the active sheet changes, or ADA reports a new usable file. **Never** overwrite with empty lists/None from a sparse response.
-
-**Clear when:** `GOFOAgent.clear_attachment_context()` / `ConversationState.clear_attachment_context()` (explicit conversation reset). Detach alone does not clear metadata.
-
-**Rules that must not regress:**
-
-1. Active attachment / file-column language stays on the file unless the user explicitly asks for live DB comparison or a clear ops-DB ask (“rank all hubs”).
-2. Conversation repair must **not** rewrite “No, for \<column\>…” into “inspect this file by packages”.
-3. Never treat dataframe preview rows as warehouse SQL evidence in QA.
-4. Excel: never use openpyxl `read_only=True` as the primary reader (`tools/files/excel_reader.py`).
-5. Empty `file_context_summary` values must not wipe persisted attachment metadata.
-
-## Clarification Manager
-
-Sits **after Planner, before tool execution**. Asks for missing metric / scope / time; resumes enriched question. Skip when memory already has slots.
-
-## Specialized Python Analytics Tools
-
-`tools/python/{transformation,statistics,visualization,recommendation}_tool.py` — LLM never calculates. Attachment ADA charts still use `tools/files/charts.py` directly.
+- **SQLite ops warehouse:** `SQLITE_DATABASE` (default `data/gofo_demo.db`)
+- **Conversation memory SQLite:** `MEMORY_DATABASE` (default `data/memory.db`)
+- Uploads on disk under `data/uploads/`
 
 ## External Integrations
 
-- **OpenAI** — chat (`LLM_MODEL`, default `gpt-4o-mini`) and embeddings
-- **Hugging Face / sentence-transformers** — local reranker
-- **LangGraph / LangSmith (optional)** — orchestration + tracing when `LANGGRAPH_*` flags are on
-- No Slack/Lark/Redis/Snowflake unless explicitly requested
+- **OpenAI** — chat (`LLM_MODEL`, default `gpt-4o-mini`) + embeddings (`text-embedding-3-small`)
+- Optional **LangSmith** when `LANGGRAPH_TRACING` / LangChain tracing env is set
+- Local **sentence-transformers** reranker (hybrid RAG)
 
 ---
 
@@ -341,80 +184,44 @@ Sits **after Planner, before tool execution**. Asks for missing metric / scope /
 ```text
 gofo_agent/
 ├── api/                 # FastAPI HTTP layer
-├── agents/              # Multi-agent: Supervisor, Registry, specialized agents
-├── graph/               # Optional LangGraph orchestration (AgentState, nodes, checkpoints)
-├── core/                # Agent control plane + Prompt Registry
-├── prompts/             # Versioned prompt assets (registry.yaml per family)
-├── frontend/            # Primary Streamlit UI + attachment preview
-├── tools/
-│   ├── analysis/        # KPI, root cause, anomaly, recommendations
-│   ├── analyzer/        # Business reasoner
-│   ├── context/         # Conversation/file context builders
-│   ├── conversation/    # Multi-turn resolver / repair (substantive "No, …" keep)
-│   ├── files/           # Attachments, ADA, Excel reader, matplotlib charts
-│   ├── llm/             # OpenAI client wrappers
-│   ├── memory/          # Short-term, state, long-term SQLite memory
-│   ├── orchestration/   # Semantic request analysis
-│   ├── planner/         # Legacy capability planner + business Intent enum
-│   ├── python/          # Transform / stats / viz / recommend
-│   ├── knowledge_graph/ # Relationship lookups
-│   ├── rag/             # Hybrid retrieval + confidence + generation
-│   ├── sql/             # Schema registry/retriever, planner, executor, validator
-│   ├── router.py
-│   └── synthesizer.py
-├── cli/                 # Interactive CLI REPL
-├── evaluation/          # Benchmark + prompt experiments
-├── tests/               # Pytest suite (~385 tests)
-├── scripts/             # Demo DB + helpers
-├── data/                # SQLite DBs + uploads (runtime; do not commit secrets)
-├── chroma_db/           # Vector store persistence
-├── docs/                # SOP source docs for ingest
-├── assets/fonts/        # Optional bundled CJK fonts
-├── config.py            # Central env-backed configuration
-├── ingest.py            # RAG + BM25 ingest entrypoint
-├── agent.py / query.py  # CLI / legacy entry helpers
-├── docker-compose.yml   # gofo-api + gofo-ui (--reload, source mounts)
-├── Dockerfile           # Python 3.11 + matplotlib + WenQuanYi CJK font
+├── agents/              # Multi-agent Registry + specialized agents
+├── graph/               # LangGraph frontier + planner loop (optional)
+├── core/                # Agent facade, router, planner, QA, prompts, TaskSpec, verifier
+├── tools/               # RAG, SQL, files/ADA, memory, conversation, KG, charts
+├── frontend/            # Primary Streamlit UI
+├── prompts/             # Versioned Prompt Registry assets
+├── tests/               # Pytest suite
+├── evaluation/          # Prompt experiments / datasets
+├── docs/                # Source SOP documents for ingest
+├── data/                # SQLite DBs + uploads
+├── chroma_db/           # Chroma persistence
+├── assets/fonts/        # CJK fonts for charts
+├── cli/                 # CLI helpers
+├── config.py            # All env-backed settings
+├── docker-compose.yml   # API + UI with source mounts
+├── Dockerfile
+├── ingest.py            # SOP ingest into Chroma
 ├── requirements.txt
-├── .env.example
-├── README.md            # ← current state (this file)
-├── README_RUN.md        # Short local run cheat sheet
-└── DEVELOPMENT_LOG.md   # Append-only engineering history
+├── README.md            # THIS FILE — current state
+└── DEVELOPMENT_LOG.md   # Append-only history
 ```
 
-### Important files (responsibility)
+### Important modules (selected)
 
-| File | Responsibility |
+| Path | Responsibility |
 |------|----------------|
-| `core/agent.py` | Single facade; wires pipeline; skips QA for attachment routes |
-| `core/intent_router.py` | Attachment session + file-column preference vs ops SQL detach; persisted-metadata fallback |
-| `tools/memory/state.py` | ConversationState; attachment metadata persist / clear (never wipe with empties) |
-| `core/intent_classifier.py` | Primary intent classification |
-| `core/data_source_selector.py` | Minimum necessary data sources |
-| `core/planner.py` | ExecutionPlan + capabilities (never executes) |
-| `core/plan_executor.py` | Supervisor or ToolOrchestrator |
-| `core/tool_orchestrator.py` | Parallel/deps/retries/AgentState |
-| `core/quality_assurance.py` | Validators; `is_file_capability` |
-| `core/reflection.py` | Critic API |
-| `core/prompt_manager.py` / `prompt_registry.py` | Prompt load/render/invoke |
-| `core/route_dispatcher.py` | ATTACHMENT_* → ADA |
-| `core/clarification_manager.py` | Ask before tools |
-| `core/task_decomposition.py` | TaskSpec for LangGraph Stage 2 |
-| `core/request_verifier.py` | Verification vs TaskSpec (SOP-safe) |
-| `graph/execution.py` | PlanExecutor + memory/format (no nested ask) |
-| `tools/files/data_analysis.py` | Column match + aggregation / ranking / summary |
-| `tools/files/analysis_intent.py` | Per-prompt ADA intent (AGGREGATION, VISUALIZE, …) |
-| `tools/files/analyzer.py` | Prefer original wording for file analysis |
-| `tools/files/charts.py` | Matplotlib PNG; preferred dimension/metric |
-| `tools/files/excel_reader.py` | Robust Excel IO |
-| `tools/conversation/resolver.py` | Follow-up resolve; substantive repair replacement |
-| `tools/rag/hybrid.py` | Hybrid retrieval |
-| `tools/sql/schema_retriever.py` | Relevant schema only |
-| `api/server.py` | Thin HTTP; shared attachment service |
-| `frontend/app.py` | Chat + chart rendering |
-| `config.py` | All env defaults |
-| `agents/supervisor/supervisor_agent.py` | Capability dispatch (no business logic) |
-| `agents/registry/agent_registry.py` | Discover / health / select agents |
+| `graph/frontier.py` | SOP → ADA/analysis → SQL/Python / not_meaningful |
+| `graph/nodes.py` / `builder.py` / `runtime.py` | Graph nodes, compile, session wrapper |
+| `graph/execution.py` | PlanExecutor + memory/format without nested ask |
+| `core/task_decomposition.py` | Heuristic `TaskSpec` |
+| `core/request_verifier.py` | VerificationReport; SOP never suggests SQL retry |
+| `core/intent_router.py` | Route + detach/chart + hybrid file compares |
+| `core/clarification_manager.py` | Clarify; **cancel** on new SOP/domain ask |
+| `tools/files/attachment_memory.py` | Active set; **newest-upload focus** |
+| `tools/context/file_context_builder.py` | File reference resolution (newest vs compare) |
+| `tools/files/charts.py` | Matplotlib charts; honor preferred chart type |
+| `tools/rag/*` | Hybrid retrieval + generation |
+| `tools/sql/*` | Schema-aware SQL answering |
 
 ---
 
@@ -422,73 +229,42 @@ gofo_agent/
 
 | Feature | Description | Files | Status |
 |---------|-------------|-------|--------|
-| SOP hybrid RAG | Dense + BM25 + RRF + rerank | `tools/rag/*`, `ingest.py` | **Complete** |
-| Retrieval confidence | Multi-signal score + Planner fallbacks | `tools/rag/confidence.py` | **Complete** |
-| SQL analytics | Schema retriever → generate → validate → execute | `tools/sql/*` | **Complete** |
-| Specialized Python tools | Transform / Statistics / Visualization / Recommendation | `tools/python/*` | **Complete** |
-| Business analysis | KPI, root cause, anomaly, recommendations | `tools/analysis/*` | **Complete** |
-| Conversation memory | Short-term history + entity resolve | `tools/memory/*` | **Complete** |
-| Conversation repair | Corrections; substantive “No, …” keep new ask | `tools/conversation/resolver.py` | **Complete** |
-| Long-term memory | SQLite conversations/findings/patterns | `tools/memory/long_memory.py` | **Complete** |
-| Intent router | Attachment session + file-column routing | `core/intent_router.py` | **Complete** |
-| Intent classifier | Primary intents + confidence/tool flags | `core/intent_classifier.py` | **Complete** |
-| Data source selection | Minimum SQL/KG/RAG/Memory/Python | `core/data_source_selector.py` | **Complete** |
-| Clarification manager | Ask for missing business params | `core/clarification_manager.py` | **Complete** |
-| Multi-step planner | ExecutionPlan + capabilities | `core/planner.py` | **Complete** |
-| Knowledge graph | Driver/hub/region/manager/SOP | `tools/knowledge_graph/` | **Complete** |
-| Tool orchestrator | Parallel/sequential multi-tool execution | `core/tool_orchestrator.py` | **Complete** |
-| Multi-agent Supervisor | Capability routing via Registry | `agents/` | **Complete** |
-| Prompt Registry | Versioned prompts + experiments | `core/prompt_*.py`, `prompts/` | **Complete** |
-| Quality assurance | Evidence/reasoning/completeness | `core/quality_assurance.py` | **Complete** |
-| Reflection critic | Bounded Planner retries | `core/reflection.py` | **Complete** |
-| File QA skip | Attachment/file answers never enter SQL QA loop | `core/agent.py`, `quality_assurance.py` | **Complete** |
-| File upload + ADA | Validate → process → analyze → charts | `tools/files/*` | **Complete** |
-| File column recognition | Match question to real headers (incl. Chinese); COUNT per group | `data_analysis.py`, `analysis_intent.py` | **Complete** |
-| ADA follow-up intents | Address ranking / chart asks do not fall back to Executive Summary | `analysis_intent.py`, `data_analysis.py` | **Complete** |
-| Meta vs SOP vs file routing | “Which file…”, SOP glossary, and upload analytics stay on the correct path | `intent_router.py`, `route_dispatcher.py` | **Complete** |
-| Attachment metadata persistence | File types / filenames / active sheet survive turns; empty values never wipe | `tools/memory/state.py`, `core/intent_router.py`, `core/agent.py` | **Complete** |
-| Attachment preview | Sheet-aware modal preview | `frontend/attachment_preview.py` | **Complete** |
-| Excel full-row read | Anti-truncation reader | `tools/files/excel_reader.py` | **Complete** |
-| FastAPI + sessions | Persistent agent per `session_id` | `api/`, `core/session.py` | **Complete** |
-| Streamlit UI | Chat composer, KPIs, charts | `frontend/app.py` | **Complete** |
-| CLI | Local debug REPL | `cli/`, `query.py` | **Complete** |
-| Docker Compose | API :8000 + UI :8501, `--reload`, mounts | `Dockerfile`, `docker-compose.yml` | **Complete** |
-| Evaluation framework | Benchmark + scenarios + prompt experiments | `evaluation/` | **Complete** |
-| LangGraph orchestration | Six-stage planner-driven loop + AgentState + checkpoints; PlanExecutor (no nested ask) | `graph/` + `core/task_decomposition.py` + `core/request_verifier.py` | **Complete (planner-driven)** |
+| SOP hybrid RAG | Dense + BM25 + RRF + rerank + confidence | `tools/rag/*`, `ingest.py` | **Complete** |
+| SQL analytics | Schema retriever → SQL → execute | `tools/sql/*` | **Complete** |
+| Intent routing | ADA/SOP/SQL/chat; detach; chart type | `core/intent_router.py` | **Complete** |
+| Clarification | Ask before tools; cancel on new domain ask | `core/clarification_manager.py` | **Complete** |
+| Planner + PlanExecutor | Multi-step plans; Supervisor when multi-agent on | `core/planner.py`, `plan_executor.py`, `agents/` | **Complete** |
+| Prompt Registry | Versioned prompts under `prompts/` | `core/prompt_*.py`, `prompts/` | **Complete** |
+| Reflection / QA | Bounded retries; skip file ADA | `core/reflection.py`, `quality_assurance.py` | **Complete** |
+| File ADA | Upload, preview, column match (EN/ZH), charts | `tools/files/*`, `frontend/*` | **Complete** |
+| Newest upload focus | Later file wins for inspect/chart; compare keeps multi | `attachment_memory.py`, `file_context_builder.py` | **Complete** |
+| SOP misroute fix | Procedural/CBT follow-ups → RAG not SQL date prompt | router, classifier, selector, clarifier | **Complete** |
+| TaskSpec + verifier | Constraints + SOP-safe verification | `task_decomposition.py`, `request_verifier.py` | **Complete** |
+| LangGraph frontier loop | Frontier → plan → execute → verify → summarize | `graph/*` | **Complete** (flagged) |
+| Docker live reload | Source mounts for api/core/tools/agents/graph/frontend | `docker-compose.yml` | **Complete** |
 
 ---
 
 # Tech Stack
 
-| Area | Choices |
-|------|---------|
-| **Language** | Python 3.11 (Docker); local 3.9–3.13 also used in dev |
-| **API** | FastAPI, Uvicorn |
-| **Frontend** | Streamlit |
-| **AI / LLM** | OpenAI Chat Completions (`gpt-4o-mini` default) |
-| **Embeddings** | OpenAI `text-embedding-3-small` |
-| **Reranker** | `sentence-transformers` + `BAAI/bge-reranker-base` |
-| **RAG store** | ChromaDB |
-| **Sparse retrieval** | `rank-bm25` |
-| **Orchestration libs** | LangChain OpenAI wrappers; **optional LangGraph** (`graph/`, off by default) |
-| **Data** | pandas, openpyxl, pypdf, python-docx, Pillow |
-| **Charts** | matplotlib (Agg → PNG base64) |
-| **Analytics DB** | SQLite (`data/gofo_demo.db`) |
-| **Memory DB** | SQLite (`data/memory.db`) |
-| **Config** | python-dotenv, PyYAML, Pydantic |
-| **Infra** | Docker, Docker Compose; source bind mounts; uvicorn `--reload` |
-| **Fonts** | `fonts-wqy-zenhei` for Chinese chart labels |
-| **Tests** | pytest |
+| Area | Choice |
+|------|--------|
+| Languages | Python 3.11+ (dev often 3.13) |
+| API | FastAPI + Uvicorn |
+| UI | Streamlit |
+| Orchestration | LangChain; optional LangGraph |
+| AI models | OpenAI chat + embeddings; local BGE reranker |
+| Data | pandas, openpyxl, pypdf, python-docx, Pillow |
+| Charts | matplotlib (+ CJK fonts under `assets/fonts`) |
+| Vector DB | Chroma |
+| SQL / memory | SQLite |
+| Validation | Pydantic v2 |
+| Tests | pytest |
+| Infra | Docker + docker-compose |
 
 ---
 
 # Installation
-
-## Prerequisites
-
-- Python 3.11+ recommended
-- Docker Desktop (for Compose)
-- OpenAI API key
 
 ## Local setup
 
@@ -497,158 +273,64 @@ cd gofo_agent
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env and set OPENAI_API_KEY
-```
-
-Ensure analytics DB exists:
-
-```bash
-python scripts/create_demo_db.py   # if needed
-```
-
-Ingest SOP docs (when `docs/` present):
-
-```bash
+cp .env.example .env        # set OPENAI_API_KEY
+# Optional: ingest SOPs
 python ingest.py
 ```
 
 ## Environment variables
 
-Copy from `.env.example`. Critical keys:
+See [`.env.example`](./.env.example). Critical:
 
-| Variable | Purpose |
-|----------|---------|
-| `OPENAI_API_KEY` | Required for LLM + embeddings |
-| `LLM_MODEL` | Default `gpt-4o-mini` |
-| `EMBEDDING_MODEL` | Default `text-embedding-3-small` |
-| `SQLITE_DATABASE` | Analytics DB path |
-| `MEMORY_DATABASE` | Long-term memory DB |
+| Variable | Notes |
+|----------|--------|
+| `OPENAI_API_KEY` | Required |
+| `LLM_MODEL` / `EMBEDDING_MODEL` | Defaults `gpt-4o-mini` / `text-embedding-3-small` |
+| `SQLITE_DATABASE` / `MEMORY_DATABASE` | Ops + memory DBs |
 | `CHROMA_PERSIST_DIR` / `COLLECTION_NAME` | Vector store |
-| `UPLOAD_DIR` / `MAX_UPLOAD_SIZE_MB` / `ALLOWED_UPLOAD_TYPES` | Attachments |
-| `HYBRID_RETRIEVAL_ENABLED` | Hybrid RAG on/off |
-| `DEBUG` | Classifier/planner/QA/orchestrator debug dumps |
-| `INTENT_CLASSIFIER_ENABLED` | Primary IntentClassifier |
-| `PLANNER_ENABLED` | Multi-step planner path |
-| `CLARIFICATION_MANAGER_ENABLED` | Ask for missing params (default true) |
-| `RETRIEVAL_CONFIDENCE_ENABLED` | Adaptive retrieval confidence |
-| `DATA_SOURCE_SELECTION_ENABLED` | Minimum source selection |
-| `SCHEMA_RETRIEVER_ENABLED` | Relevant schema before SQL |
-| `QUALITY_ASSURANCE_ENABLED` | QA validators |
-| `QA_MAX_RETRIES` / `QA_SCORE_THRESHOLD` / `QA_APPROVE_THRESHOLD` | QA thresholds |
-| `REFLECTION_ENABLED` / `REFLECTION_USE_LLM` / `REFLECTION_MAX_RETRIES` | Critique loop |
-| `TOOL_ORCHESTRATOR_*` | Plan execution |
-| `PROMPT_REGISTRY_DIR` / `PROMPT_HOT_RELOAD` / `PROMPT_DEBUG` / `PROMPT_EXPERIMENT` | Prompt Registry |
-| `MULTI_AGENT_ENABLED` / `MULTI_AGENT_PARALLEL` / `MULTI_AGENT_DEBUG` | Supervisor path |
-| `LANGGRAPH_ENABLED` | Wrap sessions in `LangGraphGOFOAgent` (default **false**) |
-| `LANGGRAPH_ROUTED_NODES` | Supervisor → ada/sql/rag/chat nodes (vs single legacy node) |
-| `LANGGRAPH_CHECKPOINTING` | In-memory `MemorySaver` per thread/session |
-| `LANGGRAPH_DEBUG` / `LANGGRAPH_TRACING` | Verbose node logs / LangSmith tracing |
-| `API_BASE_URL` | Streamlit → API |
-| `MPLCONFIGDIR` | Writable matplotlib cache (Compose: `/tmp/matplotlib`) |
+| `LANGGRAPH_ENABLED` | **Code default `false`** in `config.py`; set `true` to use frontier loop |
+| `MULTI_AGENT_*`, `PLANNER_*`, `CLARIFICATION_*`, `REFLECTION_*`, `QA_*` | Control plane toggles |
 
-**Never commit `.env` or real API keys.**
-
-## Backend startup (local)
+## Backend
 
 ```bash
 export PYTHONPATH=.
 uvicorn api.server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Health / ask / upload:
+## Frontend
 
 ```bash
-curl http://localhost:8000/health
-curl -X POST http://localhost:8000/attachments -F "files=@report.xlsx" -F "session_id=demo"
-curl -X POST http://localhost:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question":"inspect this file","session_id":"demo","attachments":["<id>"]}'
-```
-
-## Frontend startup (local)
-
-```bash
-export PYTHONPATH=.
 export API_BASE_URL=http://localhost:8000
 streamlit run frontend/app.py --server.port 8501
 ```
 
-## Docker commands
+## Docker
 
 ```bash
-docker compose up --build -d
-docker compose logs -f gofo-api gofo-ui
-docker compose up -d --force-recreate   # after compose volume changes
-docker compose down
+docker compose up --build
+# API http://localhost:8000  UI http://localhost:8501
 ```
 
-**Compose notes:**
-
-- API runs `uvicorn … --reload`
-- Bind-mounted: `api/`, `core/`, `tools/`, `agents/`, `prompts/`, `frontend/`, `config.py`, `data/`, `logs/`, `chroma_db/`
-- Rebuild images after `requirements.txt` / Dockerfile changes
-- Recreate containers after volume list changes
-
-## CLI
-
-```bash
-export PYTHONPATH=.
-python query.py
-# or
-python -m cli.repl
-```
-
-## Tests
-
-```bash
-export PYTHONPATH=.
-pytest tests/ -q
-```
-
-Integration-heavy paths disable planner/QA/reflection/clarification execution by default in `tests/conftest.py`. Unit tests cover those modules directly. Multi-agent unit tests keep `MULTI_AGENT_ENABLED=false` when asserting ToolOrchestrator paths.
-
-## Evaluation Framework
-
-```bash
-export PYTHONPATH=.
-python -m evaluation                  # offline mock smoke
-python -m evaluation --mode live      # real GOFOAgent
-python -m evaluation.prompt_experiments --mode mock
-```
-
-Reports land under `evaluation/results/`.
+Compose mounts `./graph`, `./core`, `./tools`, `./agents`, `./frontend`, etc., for live reload.
 
 ---
 
 # Current Architecture Decisions
 
-These are intentional. Future agents should **not** reverse them without an explicit product request.
-
-1. **Modular control plane, optional multi-agent, optional LangGraph** — one `GOFOAgent` facade; Supervisor/Registry when `MULTI_AGENT_ENABLED`; LangGraph wraps the same agent when `LANGGRAPH_ENABLED` (default off). Do not rewrite tools into the graph.
-2. **Thin API/UI** — intelligence lives under `core/`, `tools/`, `agents/`.
-3. **Classify → Select sources → Plan → Clarify → Supervise/Orchestrate → Critique** — do not collapse Planner into Executor or let critics write final answers.
-4. **Planner never executes tools; Orchestrator/Supervisor never invent plans; DataSourceSelector never executes.**
-5. **Minimum necessary sources** — combine SQL/KG/RAG/Python only when required.
-6. **Reflection is the primary critic** for SQL/RAG; QA validators score underneath.
-7. **Bounded retries (default 2)** — never infinite critique loops.
-8. **File / attachment answers skip SQL QA & reflection** — dataframe rows in `sql_rows` are not warehouse evidence; never overwrite ADA with `SELECT 'UNKNOWN'`.
-9. **Centralized IntentRouter owns attachment activate/detach** — uploads must not permanently hijack the session; ops-DB asks (“rank all hubs”) still detach.
-10. **File-column / for-each language prefers attachment** while a file session or stored attachments exist.
-11. **Persisted attachment metadata outlives `attachment_active`** — detach/flicker clears the bind flag only; IntentRouter reuses metadata for ADA follow-ups until explicit reset or a new file replaces it.
-12. **Shared AttachmentService in API process** — session agents reuse the same upload index.
-13. **Parse-once ADA** — store DataFrame; fresh `analyze_dataframe` per prompt; match real column names from the question.
-14. **Substantive conversation repairs keep the new ask** — do not patch prior “inspect this file” when the user says “No, for \<column\>…”.
-15. **Matplotlib server-side charts** — `image_base64` PNGs; UI uses `st.image`.
-16. **Excel: no primary `read_only`** — use `tools/files/excel_reader.py`.
-17. **Hybrid RAG behind `retrieve()`** — preserve public API.
-18. **SQLite only for analytics + memory** — no Redis/Postgres unless requested.
-19. **Docker source mounts + `--reload` for iteration** — recreate on volume changes; rebuild on dependency changes.
-20. **Documentation split** — README = current; DEVELOPMENT_LOG = append-only history.
-21. **SQL Schema Retriever** — never dump the full schema into the LLM prompt; validate against allowlist.
-22. **Specialized Python tools** — never put calculations in the LLM; `PYTHON` is a legacy alias only.
-23. **Prompt Registry is the only prompt loader** — use `PromptManager`; sampling from prompt metadata.
-24. **Supervisor never hardcodes agent names** — capabilities → Registry; register new agents without editing Supervisor.
+| Decision | Why | Do not |
+|----------|-----|--------|
+| Dual path: legacy ask + LangGraph flag | Safe migration; kill switch | Remove legacy until LangGraph soak is done |
+| `LANGGRAPH_ENABLED` default **false** in `config.py` | Production safety | Flip default on without UI validation |
+| No nested `ask` on LangGraph path | Avoid dual repair/route ownership | Reintroduce `ask(pre_routed=…)` as the tool runner |
+| Frontier SOP-first decision order | Fixes CBT/driver SOP misroutes to SQL dates | Ask for “today/this week” on glossary SOP asks |
+| Verifier: SOP never SQL-retries | Prevents `SELECT UNKNOWN` overwriting RAG | Re-enable Reflection SQL retry for SOP on graph path |
+| Clarification cancels on new domain ask | Stops “tell me more about CBT” resuming a date prompt | Always glue free-text into pending clarification |
+| Newest upload is ADA focus | Second file was shadowed by first | Re-activate *all* `processed_contexts` on every turn |
+| Hybrid file↔DB/SOP stays on ADA | “Compare it with today’s database” / “follow our SOP” | Detach to pure SQL/SOP mid file session for hybrid compares |
+| Prompt Registry only | Versioned prompts | Hardcode prompt strings / temperatures in tools |
+| File ADA skips SQL QA | ADA is not SQL | Run SQL Reflection on file charts |
+| README vs DEVELOPMENT_LOG | Current vs history | Overwrite DEVELOPMENT_LOG |
 
 ---
 
@@ -656,81 +338,46 @@ These are intentional. Future agents should **not** reverse them without an expl
 
 ## Completed
 
-- RAG + SQL + business analysis + memory + FastAPI + Streamlit + Docker
-- Conversational resolver / state repair / long-term memory
-- Attachment upload + preview + ADA + matplotlib charts + CJK fonts
-- File-column recognition (incl. Chinese) + row-count aggregation
-- Attachment metadata persistence across turns (types / filenames / active sheet)
-- Attachment QA skip (no SQL retry overwrite of file answers)
-- Hybrid RAG + Adaptive Retrieval Confidence Engine
-- Evaluation framework + Prompt Experiment Framework
-- Enterprise Prompt Registry
-- Multi-agent Supervisor + Agent Registry
-- Intent Classifier + Data Source Selection + Clarification + Planner + Orchestrator
-- Knowledge Graph + SQL Schema Registry/Retriever
-- Specialized Python analytics tools
-- Quality Assurance + Reflection with bounded retries
-- Documentation refresh for durable Cursor memory
-- Optional LangGraph planner-driven loop (`graph/`) with AgentState, TaskSpec, verifier, MemorySaver checkpoints
-- LangGraph: single Conversation Repair + Intent Routing authority; PlanExecutor execution (no nested `ask`)
-- IntentRouter detach/chart transition hardening (SOP after ADA; explicit pie/line)
+- Control plane: classifier, selector, planner, clarification, orchestrator, multi-agent, prompts
+- Hybrid RAG + SQL + ADA (EN/ZH columns, charts, metadata persistence)
+- LangGraph frontier loop + TaskSpec + SOP-safe verifier
+- SOP misroute / clarification fixes (CBT, driver responsibility, tell me more)
+- Newest-upload preference for multi-file sessions
 
-## In Progress
+## In Progress / soak
 
-- Broader PlanExecutor coverage for Follow_Up / Upload_File without regressing repair
-- Hardening chart defaults for high-cardinality Chinese address columns
-- Clear stale attachment/DataFrame caches on re-upload in long-lived Docker sessions
-- LangGraph: durable checkpointer / LangSmith beyond existing flags; default-on only after UI soak
+- Validate LangGraph (`LANGGRAPH_ENABLED=true`) in UI against SOP + multi-file ADA scenarios
+- Decide when to make LangGraph the day-to-day default (keep flag)
 
-## Planned Features
+## Planned
 
-- Stronger SQL templates / validation for common KPIs
-- Expand Clarification Manager patterns (region filters, structured date picker)
-- Long-term memory deduplication and retention policies
-- Optional auth for deployed API
-- Cloud deploy configs
-- Snowflake / warehouse executor if requested
-- Observability metrics beyond file logs
-- Durable SQLite/Postgres LangGraph checkpointer (beyond in-memory MemorySaver)
-- Optional Plotly interactive charts only if product asks (keep matplotlib default)
-- CI GitHub Action running `pytest` on push
+- Optional LLM enrichment inside frontier (today: structured heuristics)
+- Durable LangGraph checkpointer beyond in-memory MemorySaver
+- Stronger column grounding for Chinese headers in charts (e.g. `最新轨迹`)
+- UI capability-aware panels (hide SQL panels on pure SOP answers)
 
 ## Known Limitations
 
-- openpyxl `read_only` **must not** be reintroduced as primary Excel path
-- Large Excel files load fully into memory (ADA tradeoff)
-- Hybrid reranker downloads a local model (first run / image build can be slow/large)
-- Chinese chart labels need CJK fonts in the runtime
-- Streamlit preview buttons need unique keys per message index
-- Parallel orchestrator workers must not mutate `AgentState` directly (main thread commits)
-- `.env`, uploads, chroma, and `memory.db` are local runtime artifacts — do not commit secrets or large uploads
-- Many `datetime.utcnow()` deprecation warnings remain in memory modules
-- Clarification patterns are heuristic; novel ambiguous phrasings may still reach tools
-- Leading “no” without a substantive replacement ask still enters repair paths (by design for short corrections)
+- `.env.example` may show `LANGGRAPH_ENABLED=true` for local experiments; **code default remains false**
+- Frontier v1 is heuristic (not a full LLM “workflow inventor”)
+- Multi-file **compare** keeps multiple actives; single-file asks prefer newest
+- Legacy Reflection can still SQL-retry SOP on the **legacy** path if QA fires (graph verifier blocks that class of bug)
 
 ---
 
 # Instructions for Future Cursor Agents
 
-1. **Read `README.md` first** (this file).
-2. **Read the latest session(s) in `DEVELOPMENT_LOG.md`** for recent decisions and pitfalls.
-3. **Inspect the repository** before coding (`core/`, `tools/`, `agents/`, `graph/`, `prompts/`, `frontend/`, `api/`, `tests/`).
-4. **Continue from the current architecture** — extend modules; do not recreate frameworks.
-5. **Never recreate existing functionality** (router, hybrid RAG, retrieval confidence, attachment/ADA pipeline, excel_reader, charts, classifier, data source selector, clarification, planner, orchestrator, QA, reflection, knowledge graph, Prompt Registry, multi-agent Registry/Supervisor, file-column matching, LangGraph `graph/` wrappers).
-6. **Extend existing modules** instead of replacing them.
-7. **Keep documentation updated**:
-   - Update `README.md` whenever architecture or current state changes.
-   - **Append** a new dated session to `DEVELOPMENT_LOG.md` (never overwrite history).
-8. Preserve modular tool boundaries; keep API/UI thin.
-9. Do not add Redis or new databases unless the user explicitly asks. Multi-agent lives under `agents/`; LangGraph orchestration lives under `graph/` — extend those packages, do not invent a second framework.
-10. Never log or commit real API keys.
-11. Run `pytest tests/ -q` after substantive changes.
-12. After `docker-compose.yml` volume changes: `docker compose up -d --force-recreate`. After dependency/Dockerfile changes: rebuild images.
-13. If documentation and code disagree, tell the user before making changes.
-14. Wait for approval before large redesigns unless the user already requested implementation.
-15. When fixing attachment bugs: verify routing (`ATTACHMENT_*`), ADA column match, and that Reflection/QA does not run on file answers.
-16. When changing LangGraph: keep `LANGGRAPH_ENABLED` default false; preserve legacy `GOFOAgent.ask`; do not expose `reasoning_trace` to end users; verifier must never SQL-retry SOP/RAG.
+1. **Read `README.md` first.**
+2. **Inspect the repository** before coding (do not rely on chat memory alone).
+3. **Continue from the current architecture** — extend `core/`, `tools/`, `graph/`, `agents/`, `frontend/`.
+4. **Never recreate** existing router, RAG, ADA, planner, registry, or graph packages from scratch.
+5. **Extend modules** instead of replacing them; keep API/UI contracts stable.
+6. **Keep documentation updated** — rewrite README for current state; **append** DEVELOPMENT_LOG.
+7. **Update README.md whenever architecture or flags change.**
+8. When changing LangGraph: keep default-off unless user asks; never expose `reasoning_trace` to end users; SOP verifier must not request SQL retry.
+9. When changing attachments: never wipe persisted metadata with empty values; prefer newest upload for inspect/chart; keep hybrid compare paths on ADA.
+10. Do not commit secrets, `__pycache__`, `logs/`, or large runtime DBs unless explicitly requested.
 
 ---
 
-*Last updated: 2026-08-02 — SOP misroute fixes + frontier SOP→ADA/SQL decision tree.*
+*Last updated: 2026-08-09 — tip `71e2463` (newest-upload ADA focus + frontier/SOP docs).*

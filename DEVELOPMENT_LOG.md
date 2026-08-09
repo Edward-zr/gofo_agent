@@ -2146,3 +2146,136 @@ Decision order: SOP searchable → else ADA/data → requires analysis? → SQL/
 ---
 
 *End of session 2026-08-02 (SOP fix + frontier).*
+
+---
+
+# Session — Newest-Upload ADA Focus + Permanent Docs (2026-08-09)
+
+## Session Information
+
+| Item | Value |
+|------|--------|
+| **Date** | 2026-08-09 |
+| **Branch** | `add_langgraph_react_harness` @ tip `71e2463` (prior feature tip `960609a`) |
+| **Overall objective** | (1) Fix multi-file ADA so inspect/chart follow-ups bind the **newest** upload, not the first file still in session memory. (2) Rewrite `README.md` and append this log so a new Cursor agent can continue with zero chat history. |
+| **Context** | Continues the 2026-08-02 SOP-misroute + LangGraph frontier work (already logged above; committed as `960609a`). This session’s engineering delta is the newest-upload fix (`71e2463`) plus documentation permanentization. |
+
+## Work Completed
+
+### Features / bug fixes
+
+1. **Newest-upload preference for ADA follow-ups** (`71e2463`)
+   - After uploading a second Excel/CSV, “inspect the file” / chart asks still analyzed the **first** file (`S&Pdata.xlsx`).
+   - Root cause: `AttachmentMemory.activate(None)` re-appended **all** `processed_contexts`; active order became `[newest, oldest…]` and “the file” / `contexts[-1]` picked the **oldest**.
+   - Fix: `activate` keeps current focus (or falls back to **newest only**); never silently re-activates the entire history. `resolve_file_reference` prefers newest for inspect/generic single-file asks; multi-file **compare** phrases still return all contexts. Hybrid “compare upload vs DB/SOP” stays on ADA in the router.
+
+2. **Prior conversation work already on tip (cross-ref)** — if reading this log alone:
+   - Planner-driven LangGraph loop (`TaskSpec`, `RequestVerifier`, `graph/execution.py` PlanExecutor — no nested `ask`)
+   - Frontier decision tree (`graph/frontier.py`): SOP searchable → ADA/analysis → SQL/Python → summarize; else not meaningful
+   - SOP misroute / clarification cancel (CBT, driver responsibility, “tell me more” no longer resume SQL date prompts)
+   - `LANGGRAPH_ENABLED` default **false** in `config.py` (legacy kill switch); `.env.example` may show `true` for local experiments
+
+### Documentation
+
+- **Rewrote `README.md`** to current tip state (not append-only): dual ask paths, frontier flow, repo map, features, stack, install, locked decisions, roadmap, future-agent rules.
+- **Appended this DEVELOPMENT_LOG session** (history preserved).
+
+### Commits on branch (this conversation arc)
+
+| SHA | Summary |
+|-----|---------|
+| `9b7fbc7` | Prompt experiment results + runtime artifacts (user-directed staged-only commit) |
+| `960609a` | LangGraph frontier + SOP misroute clarifications |
+| `71e2463` | Prefer newest upload for ADA follow-ups |
+
+## Files Created
+
+| File | Purpose |
+|------|---------|
+| *(this session)* | No new source modules; docs only + tests extended in prior commit. |
+| *(from `960609a`, if not already noted elsewhere)* | `core/task_decomposition.py`, `core/request_verifier.py`, `graph/*` (`frontier.py`, `nodes.py`, `builder.py`, `execution.py`, `runtime.py`, `state.py`, `tools.py`, `transitions.py`, `observability.py`), `tests/test_frontier.py`, `tests/test_sop_misroute_fixes.py`, `tests/test_langgraph_orchestration.py`, `tests/test_task_spec_and_verifier.py` |
+
+## Files Modified
+
+| File | Why |
+|------|-----|
+| `tools/files/attachment_memory.py` | `activate()` no longer re-adds all processed files; focus = current set or newest-only fallback |
+| `tools/context/file_context_builder.py` | Newest default for inspect / “new file” / generic single-file; compare phrases keep multi-file |
+| `core/intent_router.py` | Hybrid file↔DB/SOP compares stay on ADA (don’t detach mid hybrid ask) |
+| `tests/test_attachments.py` | Regression: activate focus, newest inspect, resolve_file_reference defaults |
+| `README.md` | Full rewrite to tip `71e2463` current architecture |
+| `DEVELOPMENT_LOG.md` | This session entry |
+
+## Problems Encountered
+
+### Problem 1 — Second upload ignored for inspect/chart
+
+| | |
+|--|--|
+| **Problem** | Upload A → inspect OK; upload B → inspect/chart still described A |
+| **Root Cause** | `activate(None)` treated “no IDs” as “activate everything”; list order left oldest as last / “the file” |
+| **Solution** | Keep existing active focus; if empty, activate **newest** only. Reference resolver prefers newest unless compare language |
+| **Lessons** | Attachment session memory must distinguish *registered history* vs *active focus*; never equate “resume ADA” with “bind all uploads” |
+
+### Problem 2 — Multi-file compare regressions after newest-default
+
+| | |
+|--|--|
+| **Problem** | Preferring newest broke tests that compare multiple CSVs / PDF+RAG / image+DB |
+| **Root Cause** | Over-narrowing `resolve_file_reference` for all multi-context asks |
+| **Solution** | Explicit compare / hub-change / multi-file phrases keep full context list; only generic single-file asks collapse to newest |
+| **Lessons** | Newest preference is the default for *singular* file deixis; comparison is a first-class exception |
+
+### Problem 3 — SOP asks swallowed by pending SQL clarification (prior; fixed in `960609a`)
+
+| | |
+|--|--|
+| **Problem** | “Tell me more about CBT” / “what should driver do?” asked for date ranges |
+| **Root Cause** | Clarification resume + knowledge defaulting toward SQL |
+| **Solution** | Cancel clarification on new domain/SOP ask; SOP before SQL in router/classifier; selector never date-prompts knowledge |
+| **Lessons** | Pending clarification must yield to a clearly new question type |
+
+## Important Decisions
+
+1. **Newest upload is the default ADA focus** for inspect/chart/“the file”; history stays in `processed_contexts` for explicit first/second/compare references.
+2. **Do not** re-activate all `processed_contexts` on every attachment turn.
+3. **Hybrid compare** (file vs database / SOP) remains on ADA path so detach logic does not strand analysis.
+4. **LangGraph stays opt-in** (`LANGGRAPH_ENABLED` code default false) until UI soak; prefer LangGraph long-term as primary with legacy as kill switch.
+5. **README = current state; DEVELOPMENT_LOG = append-only history** — never overwrite prior sessions.
+6. Locked from prior sessions (still in force): no nested `ask` on LangGraph path; verifier SOP ≠ SQL retry; one replan max; frontier SOP-first.
+
+## Testing
+
+| Suite / command | Result |
+|-----------------|--------|
+| `pytest tests/test_attachments.py` (+ metadata / ADA attachment suites during fix) | **Green** (~65 related attachment tests after hybrid router tweak) |
+| Prior: `test_sop_misroute_fixes` + `test_frontier` + langgraph/router/supervisor | **51 passed** (2026-08-02) |
+| Docs update | Manual review of README sections vs tip files under `graph/`, `core/`, `tools/` |
+
+**Remaining issues**
+
+- Chinese column grounding (e.g. `最新轨迹`) still needs stronger ADA chart/column matching once the correct file is bound
+- LangGraph ON soak in Streamlit UI not fully signed off
+- `.env.example` may advertise `LANGGRAPH_ENABLED=true` while `config.py` defaults false — agents must trust **code default**
+
+## Next Recommended Tasks
+
+1. **Soak-test LangGraph ON** in UI: CBT follow-ups, driver responsibility, upload A→B inspect/chart, hybrid file vs DB.
+2. After soak, consider making LangGraph the day-to-day default; keep flag as kill switch.
+3. **Column-aware ADA** for Chinese headers when newest file is correctly bound.
+4. Durable LangGraph checkpointer / optional LangSmith beyond MemorySaver + flags.
+5. UI: hide SQL panels when answer is pure SOP (capability-aware rendering).
+6. Optional LLM enrichment inside `graph/frontier.py` (today: structured heuristics).
+
+## Notes for Future Agents
+
+- Tip commits: `960609a` (frontier + SOP) then `71e2463` (newest upload). Docs rewritten 2026-08-09 may be uncommitted until the user asks to commit.
+- To exercise frontier: set `LANGGRAPH_ENABLED=true` and restart API/UI (Docker mounts `./graph`).
+- Production-safe path today: leave flag false → full `GOFOAgent.ask` (still includes Phase-1 SOP misroute + newest-upload fixes).
+- Debug multi-file ADA: inspect `AttachmentMemory.active_attachment_ids` vs `processed_contexts` keys; active should not silently grow to the full history on every turn.
+- Ask API contract: body field is `attachments` (list of IDs), not a single `attachment_id`.
+- Do not recreate `graph/`, `IntentRouter`, Prompt Registry, or ADA pipeline — extend them.
+
+---
+
+*End of session 2026-08-09 (newest-upload ADA focus + permanent documentation).*
